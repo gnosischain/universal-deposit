@@ -9,12 +9,16 @@ multiline_func_header = 'params_first'
 sort_imports = true
 
 [profile.default]
-solc_version = '0.8.23'
+solc_version = '0.8.22'
+auto_detect_solc = false
+evm_version = 'paris'
+
 libs = ['node_modules', 'lib']
 optimizer=false
 src = "src"
 out = "out"
 # This translates to `solc --allow-paths node_modules`
 allow_paths = ["node_modules"]
+
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

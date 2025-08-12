@@ -1,4 +1,12 @@
 forge-std/=node_modules/forge-std/src
-
+@openzeppelin/contracts/=node_modules/@openzeppelin/contracts/
+@openzeppelin/contracts-upgradeable/=node_modules/@openzeppelin/contracts-upgradeable/
+@stargatefinance/stg-evm-v2/=node_modules/@stargatefinance/stg-evm-v2/
+@layerzerolabs/=node_modules/@layerzerolabs/
+@stargatefinance/stargate-v2/=lib/stargate-v2/
+@ensdomains/buffer/=node_modules/@ensdomains/buffer/
+@layerzerolabs/lz-evm-v1-0.7/=node_modules/@layerzerolabs/lz-evm-v1-0.7/
+hardhat-deploy/=node_modules/hardhat-deploy/
+solidity-bytes-utils/=node_modules/solidity-bytes-utils/
 contracts/=src/contracts
 interfaces/=src/interfaces

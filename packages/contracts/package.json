@@ -1,10 +1,10 @@
 {
-    "name": "@ts-turborepo-boilerplate/contracts",
-    "version": "0.0.1",
+    "name": "@universal-deposit/contracts",
+    "version": "1.0.0",
     "private": true,
     "description": "",
     "license": "MIT",
-    "author": "Wonderland",
+    "author": "gnosis",
     "type": "module",
     "scripts": {
         "build": "forge build",
@@ -22,8 +22,22 @@
         "test/**/*.sol": "pnpm lint:sol-tests",
         "package.json": "sort-package-json"
     },
+    "dependencies": {
+        "@openzeppelin/contracts": "^4.8.1",
+        "@openzeppelin/contracts-upgradeable": "^4.8.1",
+        "@stargatefinance/stg-evm-v2": "2.0.6"
+    },
     "devDependencies": {
+        "@ensdomains/buffer": "0.1.1",
+        "@layerzerolabs/lz-evm-messagelib-v2": "2.0.11",
+        "@layerzerolabs/lz-evm-v1-0.7": "3.0.124",
         "forge-std": "github:foundry-rs/forge-std#semver:1.9.2",
-        "solhint-community": "4.0.0"
+        "hardhat-deploy": "^0.12.4",
+        "solhint-community": "4.0.0",
+        "solidity-bytes-utils": "0.8.4"
+    },
+    "peerDependencies": {
+        "@layerzerolabs/lz-evm-oapp-v2": "*",
+        "@layerzerolabs/lz-evm-protocol-v2": "*"
     }
 }
