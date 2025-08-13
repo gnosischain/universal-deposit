@@ -6,11 +6,11 @@ import {ERC1967Proxy} from '@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.s
 
 contract ProxyFactory {
   address public immutable IMPLEMENTATION;
+  address public immutable UD_MANAGER;
 
-  constructor(
-    address _implementation
-  ) {
+  constructor(address _implementation, address _udManager) {
     IMPLEMENTATION = _implementation;
+    UD_MANAGER = _udManager;
   }
 
   function createUniversalAccount(
@@ -18,7 +18,9 @@ contract ProxyFactory {
     address _recipient,
     uint256 _destinationChainId
   ) external returns (address) {
-    bytes memory data = abi.encodeWithSelector(UniversalDepositAccount.initialize.selector, _owner, _recipient);
+    bytes memory data = abi.encodeWithSelector(
+      UniversalDepositAccount.initialize.selector, _owner, _recipient, _destinationChainId, UD_MANAGER
+    );
     bytes32 salt;
     assembly {
       let ptr := mload(0x40)
@@ -36,7 +38,9 @@ contract ProxyFactory {
     address _recipient,
     uint256 _destinationChainId
   ) external view returns (address) {
-    bytes memory data = abi.encodeWithSelector(UniversalDepositAccount.initialize.selector, _owner, _recipient);
+    bytes memory data = abi.encodeWithSelector(
+      UniversalDepositAccount.initialize.selector, _owner, _recipient, _destinationChainId, UD_MANAGER
+    );
     bytes32 salt;
     assembly {
       let ptr := mload(0x40)

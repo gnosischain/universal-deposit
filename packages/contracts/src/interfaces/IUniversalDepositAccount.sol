@@ -28,6 +28,11 @@ interface IUniversalDepositAccount {
     bytes oftCmd;
   }
 
+  error AmountNotEnough(uint256 amount);
+  error ETHNotSupported();
+  error InsufficientNativeToken(uint256 balance, uint256 required);
+  error InvalidAddress(address givernAddress);
+  error InvalidToken(address token);
   error UnsupportedRoutes();
 
   event BridgingInitiated(uint256 indexed nonce);
@@ -37,18 +42,23 @@ interface IUniversalDepositAccount {
 
   receive() external payable;
 
-  function initialize(address _owner, address _recipient) external;
+  function VERSION() external view returns (uint8);
+  function dstChainId() external view returns (uint256);
+  function initialize(address _owner, address _recipient, uint256 _dstChainId, address _udManager) external;
   function nonce() external view returns (uint256);
   function owner() external view returns (address);
-  function quoteFee(
-    uint256 amount
+  function quoteStargateFee(
+    uint256 amount,
+    address srcStargateToken
   ) external view returns (uint256 valueToSend, SendParam memory sendParam, MessagingFee memory messagingFee);
   function recipient() external view returns (address);
   function renounceOwnership() external;
-  function settle() external payable returns (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt);
+  function settle(
+    address srcToken
+  ) external payable returns (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt);
   function transferOwnership(
     address newOwner
   ) external;
+  function udManager() external view returns (address);
   function withdrawToken(address token, uint256 amount) external;
-  function VERSION() external view returns (uint8);
 }

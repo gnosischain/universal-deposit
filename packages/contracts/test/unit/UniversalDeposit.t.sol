@@ -7,108 +7,162 @@ pragma solidity 0.8.22;
 
 import {ProxyFactory} from '../../src/contracts/ProxyFactory.sol';
 import {UniversalDepositAccount} from '../../src/contracts/UniversalDepositAccount.sol';
-import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
-import {CustomStargateTestHelper} from '../../src/test/CustomStargateTestHelper.sol';
 
+import {UniversalDepositManager} from '../../src/contracts/UniversalDepositManager.sol';
+
+import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
+import {IUniversalDepositManager} from '../../src/interfaces/IUniversalDepositManager.sol';
 import {ERC20} from '../../src/test/ERC20.sol';
+
+import {StargateOFT} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/StargateOFT.sol';
+import {StargatePool} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/StargatePool.sol';
 import {IStargatePool} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/IStargatePool.sol';
+
+import {PoolToken} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/mocks/PoolToken.sol';
 import {USDC} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/mocks/USDC.sol';
 import {LPToken} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/utils/LPToken.sol';
 import {OFTTokenERC20} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/utils/OFTTokenERC20.sol';
-import {Test, console} from 'forge-std/Test.sol';
 
-contract UniversalDepositTest is CustomStargateTestHelper, Test {
-  LPToken public lpToken;
-  address constant EDU_STARGATE_OFT_USDC = 0x2d16fde7eC929Fa00c1D373294Ae4c9Ee13F2f0e; // TODO: change
-  address constant EDU_USDCE = 0xa88f8674D4Ec56c7Cf3df60924162c24a876d278; // TODO: change
-  address constant GC_STARGATE_POOL_USDC = 0xB1EeAD6959cb5bB9B20417d6689922523B2B86C3;
-  address constant GC_USDCE = 0x2a22f9c3b484c3629090FeED35F17Ff8F88f76F0;
+import {StargateBase} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/StargateBase.sol';
+import {
+  StargateFixture,
+  StargateTestHelper
+} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/test/StargateTestHelper.sol';
+import {Test} from 'forge-std/Test.sol';
+import {IERC20} from 'forge-std/interfaces/IERC20.sol';
 
-  uint256 constant EDU_CHAINID = 41_923;
-  uint32 constant EDU_EID = 30_328;
-  uint256 constant GC_CHAINID = 100;
-  uint32 constant GC_EID = 30_145;
-  uint80 public GAS_LIMIT = 50_000;
-
-  uint80 internal constant FARE = 100_000;
-
+contract UniversalDepositTest is StargateTestHelper, Test {
   address alice = makeAddr('alice'); // alice is owner and recipient
   address caller = makeAddr('caller');
   UniversalDepositAccount universalDepositImplementation;
+  UniversalDepositManager universalDepositManager;
   ProxyFactory proxyFactory;
 
+  USDC usdc;
+  OFTTokenERC20 oftUSDC;
+  uint8 poolEid = 1;
+  uint8 oftEid = 2;
+  uint256 poolChainId = 100;
+  uint256 oftChainId = 10;
+
+  StargatePool stargatePoolUSDC;
+  StargateOFT stargateOFTUSDC;
+
+  uint8 internal NUM_ASSETS = 1; // usdc
+  uint8 internal NUM_CHAINS = 2;
+  uint8 internal NUM_NATIVE_POOLS = 0;
+  uint8 internal NUM_OFTS = 1;
+  uint8 internal NUM_POOLS = 1;
+
+  event Fixture(StargateFixture stargateFixture);
+
+  uint16 assetId = 1;
+
   function setUp() external {
-    deployCodeTo('USDC.sol', abi.encode('GC_USDCE', 'USDC'), GC_USDCE);
-    deployCodeTo('OFTTokenERC20.sol', abi.encode('EDU_USDCE', 'USDC'), EDU_USDCE);
+    // eid = 1, 2
+    // pool eid = 1
+    // oft eid = 2
+    // asset id = 1
+    setUpStargate(NUM_ASSETS, NUM_POOLS, NUM_NATIVE_POOLS, NUM_OFTS);
 
-    lpToken = setupStargatePoolUSDC(GC_EID, EDU_EID, GC_USDCE, GC_STARGATE_POOL_USDC);
+    // usdc = new USDC('USDC', 'USDC');
+    // oftUSDC = new OFTTokenERC20('USDC', 'USDC', 6);
 
-    setupStargateOFTUSDC(EDU_EID, GC_EID, EDU_USDCE, EDU_STARGATE_OFT_USDC);
+    // (, stargatePoolUSDC) = setupStargatePoolUSDC(srcEid, dstEid, address(usdc));
 
-    // Add the Stargate asset as a minter so its able to be called during mint/burn
+    // (stargateOFTUSDC) = setupStargateOFTUSDC(srcEid, dstEid, address(oftUSDC));
 
-    OFTTokenERC20(EDU_USDCE).addMinter(EDU_STARGATE_OFT_USDC);
-    OFTTokenERC20(EDU_USDCE).addMinter(address(this));
+    // // Add the Stargate asset as a minter so its able to be called during mint/burn
 
     universalDepositImplementation = new UniversalDepositAccount();
-    proxyFactory = new ProxyFactory(address(universalDepositImplementation));
+    universalDepositManager = new UniversalDepositManager();
+    universalDepositManager.setChainIdEid(poolChainId, poolEid); // source: Pool
+    universalDepositManager.setChainIdEid(oftChainId, oftEid); // dst: OFT
+    assertEq(universalDepositManager.chainIdToEidMap(poolChainId), poolEid);
+    assertEq(universalDepositManager.chainIdToEidMap(oftChainId), oftEid);
+
+    proxyFactory = new ProxyFactory(address(universalDepositImplementation), address(universalDepositManager));
 
     vm.deal(alice, 1 ether);
     vm.deal(caller, 1 ether);
   }
 
-  function testSettleOnGC() external {
-    vm.chainId(GC_CHAINID);
+  function setupUDManager(bool isPoolChain, uint16 assetId, uint8 eid) public returns (StargateFixture memory fixture) {
+    fixture = stargateFixtures[eid][assetId];
+    emit Fixture(fixture);
 
-    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, 100));
-    USDC(GC_USDCE).mint(alice, 1e18);
+    UniversalDepositManager.StargateTokenRoute memory stargateTokenRoute = UniversalDepositManager.StargateTokenRoute({
+      srcStargateToken: fixture.stargate,
+      dstStargateToken: makeAddr('dstStargateToken'),
+      srcEid: eid,
+      dstEid: isPoolChain ? oftEid : poolEid,
+      tokenRoute: UniversalDepositManager.TokenRoute({
+        srcToken: fixture.token,
+        dstToken: makeAddr('bridged_usdc'),
+        srcChainId: isPoolChain ? poolChainId : oftChainId,
+        dstChainId: isPoolChain ? oftChainId : poolChainId
+      })
+    });
+
+    universalDepositManager.setStargateRoute(stargateTokenRoute);
+  }
+
+  function testSettleOnPoolUSDC() external {
+    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, oftChainId));
+    (StargateFixture memory fixture) = setupUDManager(true, assetId, poolEid);
+    // StargateBase(fixture.stargate).setOFTPath(oftEid, true); // not required, will revert Path_AlreadyHasCredit() error
+    emit Fixture(fixture);
+    PoolToken(fixture.token).mint(alice, 1e18);
+    assertEq(PoolToken(fixture.token).balanceOf(alice), 1e18);
     vm.prank(alice);
-    USDC(GC_USDCE).transfer(address(udAccount), 1e18);
+    PoolToken(fixture.token).transfer(udAccount, 1e12);
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    // Test quoteFee - in test environment LZ fees are typically 0
-    (uint256 valueToSend,, IUniversalDepositAccount.MessagingFee memory messagingFee) =
-      IUniversalDepositAccount(udAccount).quoteFee(1e18);
+    (uint256 valueToSend,, IUniversalDepositAccount.MessagingFee memory messagingFee) = IUniversalDepositAccount(
+      udAccount
+    ).quoteStargateFee(PoolToken(fixture.token).balanceOf(udAccount), fixture.stargate);
     assertGe(valueToSend, 0);
 
     vm.prank(caller);
-    IUniversalDepositAccount(udAccount).settle{value: 0.1 ether}();
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(fixture.token);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
   }
 
-  function testSettleOnEdu() external {
-    vm.chainId(EDU_CHAINID);
-    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, 100));
-
-    OFTTokenERC20(EDU_USDCE).mint(alice, 1e18);
+  function testSettleOnOFTUSDC() external {
+    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, poolChainId));
+    (StargateFixture memory fixture) = setupUDManager(false, assetId, oftEid);
+    StargateBase(fixture.stargate).setOFTPath(poolEid, true);
+    emit Fixture(fixture);
+    OFTTokenERC20(fixture.token).addMinter(fixture.stargate);
+    OFTTokenERC20(fixture.token).addMinter(address(this));
+    OFTTokenERC20(fixture.token).mint(alice, 1e18);
+    assertEq(OFTTokenERC20(fixture.token).balanceOf(alice), 1e18);
     vm.prank(alice);
-    OFTTokenERC20(EDU_USDCE).transfer(address(udAccount), 1e18);
+    OFTTokenERC20(fixture.token).transfer(udAccount, 1e12);
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    // Test quoteFee - in test environment LZ fees are typically 0
-    (uint256 valueToSend,, IUniversalDepositAccount.MessagingFee memory messagingFee) =
-      IUniversalDepositAccount(udAccount).quoteFee(1e18);
+    (uint256 valueToSend,, IUniversalDepositAccount.MessagingFee memory messagingFee) = IUniversalDepositAccount(
+      udAccount
+    ).quoteStargateFee(OFTTokenERC20(fixture.token).balanceOf(udAccount), fixture.stargate);
     assertGe(valueToSend, 0);
 
     vm.prank(caller);
-
-    IUniversalDepositAccount(udAccount).settle{value: 0.1 ether}();
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(fixture.token);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
   }
 
   function testWithdrawToken() public {
-    vm.chainId(GC_CHAINID);
     ERC20 testERC20 = new ERC20();
     testERC20.initialize('WETH', 'WETH', 18);
 
     testERC20.mint(alice, 1e20);
 
-    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, 100));
+    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, poolChainId));
 
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle();
+    IUniversalDepositAccount(udAccount).settle(address(testERC20));
 
     vm.prank(alice);
 
@@ -116,7 +170,7 @@ contract UniversalDepositTest is CustomStargateTestHelper, Test {
 
     vm.startPrank(caller);
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle();
+    IUniversalDepositAccount(udAccount).settle(address(testERC20));
     vm.expectRevert();
     IUniversalDepositAccount(udAccount).withdrawToken(address(testERC20), 1e18);
     vm.stopPrank();
@@ -126,11 +180,11 @@ contract UniversalDepositTest is CustomStargateTestHelper, Test {
   }
 
   function testMetadata() public {
-    vm.chainId(GC_CHAINID);
-    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, 100));
+    address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, poolChainId));
     assertEq(IUniversalDepositAccount(udAccount).owner(), alice);
     assertEq(IUniversalDepositAccount(udAccount).recipient(), alice);
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
     assertEq(IUniversalDepositAccount(udAccount).VERSION(), 1);
+    assertEq(IUniversalDepositAccount(udAccount).dstChainId(), poolChainId);
   }
 }
