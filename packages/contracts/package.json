@@ -13,8 +13,9 @@
         "lint:fix": "forge fmt && pnpm lint:sol-tests --fix && pnpm lint:sol-logic --fix",
         "lint:sol-logic": "solhint -c .solhint.json 'src/**/*.sol'",
         "lint:sol-tests": "solhint -c .solhint.tests.json 'test/**/*.sol'",
-        "test": "forge test -vvv",
-        "test:cov": "forge coverage --report summary --report lcov --match-path 'test/unit/*'"
+        "test:cov": "forge coverage --report summary --report lcov --match-path 'test/unit/*'",
+        "test:fork": "chmod +x test/fork/forkTest.sh && bash test/fork/forkTest.sh",
+        "test:unit": "forge test --match-path 'test/unit/*' -vvv"
     },
     "lint-staged": {
         "(src|test)*.{js,css,md,ts,sol}": "forge fmt",

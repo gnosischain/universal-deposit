@@ -4,14 +4,19 @@ pragma solidity 0.8.22;
 import {ERC20} from '../../src/test/ERC20.sol';
 import {Test} from 'forge-std/Test.sol';
 
-import {UniversalDepositAccount} from '../../src/contracts/UniversalDepositAccount.sol';
-import {UniversalDepositManager} from '../../src/contracts/UniversalDepositManager.sol';
-import {ProxyFactory} from 'contracts/ProxyFactory.sol';
+import {ProxyFactory} from '../../src/ProxyFactory.sol';
+import {UniversalDepositAccount} from '../../src/UniversalDepositAccount.sol';
+import {UniversalDepositManager} from '../../src/UniversalDepositManager.sol';
 
 interface IOwnable {
   function owner() external returns (address);
 }
 
+/**
+ * @title ProxyFactoryTest
+ * @notice Unit tests for ProxyFactory contract functionality
+ * @dev Tests proxy deployment, deterministic address generation, and initialization
+ */
 contract ProxyFactoryTest is Test {
   ProxyFactory proxyFactory;
   UniversalDepositAccount universalDepositAccountImpl;
@@ -21,10 +26,7 @@ contract ProxyFactoryTest is Test {
   address stargateAddress = makeAddr('stargateAddress'); // src token address
   address recipient = makeAddr('recipient');
   address destinationTokenAddress = makeAddr('destinationToken');
-  uint256 constant EDU_CHAINID = 41_923;
-  uint32 constant EDU_EID = 30_328;
-  uint256 constant GC_CHAINID = 100;
-  uint32 constant GC_EID = 30_145;
+  uint256 dstChainId = 1;
   ERC20 mockUsdc;
 
   function setUp() public {
@@ -34,9 +36,13 @@ contract ProxyFactoryTest is Test {
     proxyFactory = new ProxyFactory(address(universalDepositAccountImpl), address(universalDepositManager));
   }
 
+  /**
+   * @notice Test proxy deployment and deterministic address generation
+   * @dev Verifies that deployed proxy matches predicted address from getUniversalAccount
+   */
   function testDeployNewProxy() public {
-    address proxy = proxyFactory.createUniversalAccount(owner, recipient, GC_CHAINID);
-    address expectedProxy = proxyFactory.getUniversalAccount(owner, recipient, GC_CHAINID);
+    address proxy = proxyFactory.createUniversalAccount(owner, recipient, dstChainId);
+    address expectedProxy = proxyFactory.getUniversalAccount(owner, recipient, dstChainId);
     assertEq(proxy, expectedProxy, 'mismatch proxy address');
   }
 }
