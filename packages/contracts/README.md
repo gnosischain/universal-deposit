@@ -149,7 +149,7 @@ manager.setStargateRoute(route);
 // 2. Create user deposit account
 address userAccount = factory.createUniversalAccount(
     userAddress,      // owner
-    recipientAddress, // recipient on dest chain
+    recipientAddress, // recipient on destination chain
     destChainId      // destination chain
 );
 
@@ -202,3 +202,8 @@ IUniversalDepositAccount(userAccount).settle{value: feeRequired}(sourceToken);
 -   [Stargate V2 Documentation](https://docs.stargate.finance/)
 -   [LayerZero V2 Documentation](https://docs.layerzero.network/)
 -   [OpenZeppelin Upgrades](https://docs.openzeppelin.com/upgrades-plugins/)
+
+## Future Roadmap
+
+-   Integrating with more bridges options
+-   Using deterministic deployment library like [createX](https://github.com/pcaversaccio/createx)
