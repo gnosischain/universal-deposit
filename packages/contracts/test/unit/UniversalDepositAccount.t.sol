@@ -5,7 +5,6 @@ import {ProxyFactory} from '../../src/ProxyFactory.sol';
 import {UniversalDepositAccount} from '../../src/UniversalDepositAccount.sol';
 import {UniversalDepositManager} from '../../src/UniversalDepositManager.sol';
 import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
-import {IUniversalDepositManager} from '../../src/interfaces/IUniversalDepositManager.sol';
 import {ERC20} from '../../src/test/ERC20.sol';
 import {Utils} from '../../src/utils/Utils.sol';
 import {StargateBase} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/StargateBase.sol';

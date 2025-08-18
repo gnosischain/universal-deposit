@@ -20,6 +20,7 @@
         "immutable-name-snakecase": "warn",
         "avoid-low-level-calls": "off",
         "one-contract-per-file": "off",
+        "custom-errors": "off",
         "max-line-length": ["warn", 120]
     }
 }

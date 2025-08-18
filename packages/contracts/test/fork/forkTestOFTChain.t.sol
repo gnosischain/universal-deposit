@@ -6,26 +6,14 @@ import {ProxyFactory} from '../../src/ProxyFactory.sol';
 import {UniversalDepositAccount} from '../../src/UniversalDepositAccount.sol';
 import {UniversalDepositManager} from '../../src/UniversalDepositManager.sol';
 import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
-import {IUniversalDepositManager} from '../../src/interfaces/IUniversalDepositManager.sol';
 import {ERC20} from '../../src/test/ERC20.sol';
 import {
-  MessagingFee,
-  MessagingReceipt,
-  OFTFeeDetail,
-  OFTLimit,
-  OFTReceipt,
-  SendParam
-} from '@layerzerolabs/lz-evm-oapp-v2/contracts/oft/interfaces/IOFT.sol';
-
-import {
-  Credit,
-  TargetCredit
+  Credit
 } from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/ICreditMessagingHandler.sol';
 import {StargateOFTUSDC} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/usdc/StargateOFTUSDC.sol';
 
 import {Utils} from '../../src/utils/Utils.sol';
 import {Test} from 'forge-std/Test.sol';
-import {console} from 'forge-std/console.sol';
 
 /**
  * @title forkTestOFTChain

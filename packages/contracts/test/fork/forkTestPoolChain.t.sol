@@ -3,22 +3,13 @@ pragma solidity 0.8.22;
 
 import {ProxyFactory} from '../../src/ProxyFactory.sol';
 import {UniversalDepositAccount} from '../../src/UniversalDepositAccount.sol';
-
 import {UniversalDepositManager} from '../../src/UniversalDepositManager.sol';
-
 import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
-import {IUniversalDepositManager} from '../../src/interfaces/IUniversalDepositManager.sol';
 import {ERC20} from '../../src/test/ERC20.sol';
-
-import {StargateBase} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/StargateBase.sol';
 import {
-  Credit,
-  TargetCredit
+  Credit
 } from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/ICreditMessagingHandler.sol';
 import {StargatePoolUSDC} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/usdc/StargatePoolUSDC.sol';
-
-import {console} from 'forge-std/console.sol';
-
 import {Test} from 'forge-std/Test.sol';
 
 import {Utils} from '../../src/utils/Utils.sol';
