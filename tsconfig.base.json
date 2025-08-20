@@ -17,9 +17,9 @@
         "useUnknownInCatchVariables": true,
         "forceConsistentCasingInFileNames": true,
         "noImplicitOverride": true,
-        /* If transpiling with TypeScript: */
+        /* Type checking only - no emit */
+        "noEmit": true,
         "module": "NodeNext",
-        "sourceMap": true,
         /* If your code doesn't run in the DOM: */
         "lib": ["es2022"]
     }

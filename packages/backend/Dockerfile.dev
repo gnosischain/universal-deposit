@@ -1,0 +1,51 @@
+# Development Dockerfile with hot reloading
+FROM --platform=linux/arm64 node:22-alpine AS development
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Enable corepack for package manager support
+RUN corepack enable || true
+
+# Install curl for health checks and OpenSSL for Prisma
+RUN apk add --no-cache curl openssl
+
+# Copy package files for standalone setup
+COPY package.json ./
+COPY pnpm-lock.yaml* ./
+COPY tsconfig.json ./
+
+# Install pnpm and dependencies (including devDependencies for tsx)
+RUN pnpm install --frozen-lockfile
+
+# Expose the API port
+EXPOSE 3000
+
+# Set development environment variables
+ENV NODE_ENV=development \
+    RUN_API=true \
+    RUN_BALANCE_WATCHER=false \
+    RUN_DEPLOY_WORKER=false \
+    RUN_SETTLE_WORKER=false
+
+# Create startup script that handles initial setup and migrations
+RUN echo '#!/bin/sh' > /app/start.sh && \
+    echo 'echo "Generating Prisma client..."' >> /app/start.sh && \
+    echo 'pnpm prisma:generate' >> /app/start.sh && \
+    echo 'echo "Waiting for database to be ready..."' >> /app/start.sh && \
+    echo 'sleep 5' >> /app/start.sh && \
+    echo 'echo "Checking for migrations..."' >> /app/start.sh && \
+    echo 'if [ ! -d "prisma/migrations" ] || [ -z "$(ls -A prisma/migrations 2>/dev/null)" ]; then' >> /app/start.sh && \
+    echo '  echo "No migrations found, creating initial migration..."' >> /app/start.sh && \
+    echo '  pnpm prisma migrate dev --name init --skip-generate' >> /app/start.sh && \
+    echo 'else' >> /app/start.sh && \
+    echo '  echo "Running existing migrations..."' >> /app/start.sh && \
+    echo '  pnpm db:migrate' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo 'echo "Starting development server..."' >> /app/start.sh && \
+    echo 'exec pnpm run dev' >> /app/start.sh && \
+    chmod +x /app/start.sh
+
+# Start development server with hot reloading
+# Generate Prisma client at runtime to use the mounted schema
+CMD ["/app/start.sh"]
