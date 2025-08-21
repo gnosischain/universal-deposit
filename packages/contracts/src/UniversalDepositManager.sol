@@ -44,31 +44,15 @@ contract UniversalDepositManager is Ownable {
   /// @notice Maps standard chain IDs to LayerZero endpoint IDs
   mapping(uint256 => uint32) public chainIdToEidMap;
 
-  /// @notice Tracks which routing paths are supported (based on route hash)
-  mapping(bytes32 => bool) public isRouteSupported;
+  /// @notice Tracks which Stargate routing paths are supported (based on route hash)
+  mapping(bytes32 => bool) public isSGRouteSupported;
 
   /// @notice Tracks which tokens are supported for bridging
-  mapping(address => bool) public isTokenSupported;
-
-  /// @notice Maps source token addresses to their routing configurations
-  mapping(address srcToken => TokenRoute tokenRoute) public tokenRouteMap;
+  mapping(address => bool) public isSrcTokenSupported;
 
   /// @notice Maps source token addresses to their Stargate-specific routing configurations
-  mapping(address srcToken => StargateTokenRoute stargateTokenRoute) public stargateTokenRouteMap;
-
-  /**
-   * @notice Sets up a basic token route between chains
-   * @dev Only callable by the contract owner. Updates multiple mappings atomically.
-   * @param tokenRoute The token routing configuration to set
-   */
-  function setRoute(
-    TokenRoute calldata tokenRoute
-  ) public onlyOwner {
-    tokenRouteMap[tokenRoute.srcToken] = tokenRoute;
-    isTokenSupported[tokenRoute.srcToken] = true;
-    bytes32 routeKey = getRouteKey(tokenRoute);
-    isRouteSupported[routeKey] = true;
-  }
+  mapping(address srcToken => mapping(uint256 dstChainId => StargateTokenRoute stargateTokenRoute)) public
+    stargateTokenRouteMap;
 
   /**
    * @notice Sets up a Stargate-specific token route with pool/OFT addresses and endpoint IDs
@@ -78,8 +62,11 @@ contract UniversalDepositManager is Ownable {
   function setStargateRoute(
     StargateTokenRoute calldata stargateTokenRoute
   ) public onlyOwner {
-    stargateTokenRouteMap[stargateTokenRoute.tokenRoute.srcToken] = stargateTokenRoute;
-    setRoute(stargateTokenRoute.tokenRoute);
+    stargateTokenRouteMap[stargateTokenRoute.tokenRoute.srcToken][stargateTokenRoute.tokenRoute.dstChainId] =
+      stargateTokenRoute;
+    isSrcTokenSupported[stargateTokenRoute.tokenRoute.srcToken] = true;
+    bytes32 routeKey = getSGRouteKey(stargateTokenRoute);
+    isSGRouteSupported[routeKey] = true;
   }
 
   /**
@@ -95,26 +82,25 @@ contract UniversalDepositManager is Ownable {
   /**
    * @notice Generates a unique hash key for a token route
    * @dev Used internally to track route support status
-   * @param tokenRoute The token route to generate a key for
+   * @param stargateTokenRoute The token route to generate a key for
    * @return bytes32 The unique hash key for the route
    */
-  function getRouteKey(
-    TokenRoute calldata tokenRoute
+  function getSGRouteKey(
+    StargateTokenRoute calldata stargateTokenRoute
   ) public pure returns (bytes32) {
-    bytes32 routeKey =
-      keccak256(abi.encode(tokenRoute.srcToken, tokenRoute.dstToken, tokenRoute.srcChainId, tokenRoute.dstChainId));
+    bytes32 routeKey = keccak256(
+      abi.encode(
+        stargateTokenRoute.srcStargateToken,
+        stargateTokenRoute.dstStargateToken,
+        stargateTokenRoute.srcEid,
+        stargateTokenRoute.dstEid,
+        stargateTokenRoute.tokenRoute.srcToken,
+        stargateTokenRoute.tokenRoute.dstToken,
+        stargateTokenRoute.tokenRoute.srcChainId,
+        stargateTokenRoute.tokenRoute.dstChainId
+      )
+    );
     return routeKey;
-  }
-
-  /**
-   * @notice Retrieves the basic token route configuration for a source token
-   * @param srcToken The source token address to look up
-   * @return tokenRoute The token route configuration
-   */
-  function getRoute(
-    address srcToken
-  ) public view returns (TokenRoute memory tokenRoute) {
-    return tokenRouteMap[srcToken];
   }
 
   /**
@@ -123,8 +109,9 @@ contract UniversalDepositManager is Ownable {
    * @return stargateTokenRoute The Stargate routing configuration
    */
   function getStargateRoute(
-    address srcToken
+    address srcToken,
+    uint256 dstChainId
   ) public view returns (StargateTokenRoute memory stargateTokenRoute) {
-    return stargateTokenRouteMap[srcToken];
+    return stargateTokenRouteMap[srcToken][dstChainId];
   }
 }

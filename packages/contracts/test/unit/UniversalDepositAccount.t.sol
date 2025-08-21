@@ -40,6 +40,8 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
   uint8 internal NUM_OFTS = 1;
   uint8 internal NUM_POOLS = 1;
 
+  uint256 maxSlippage = 50; // 0.5%
+
   uint16 assetId = 1;
 
   event ETHNotSupported();
@@ -93,15 +95,16 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
 
     uint256 initialUdAccountTokenBalance = ERC20(fixture.token).balanceOf(udAccount);
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(ERC20(fixture.token).balanceOf(udAccount), fixture.stargate);
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      ERC20(fixture.token).balanceOf(udAccount), fixture.stargate, maxSlippage
+    );
     assertGe(valueToSend, 0);
 
     vm.prank(caller);
     vm.expectEmit();
     emit IUniversalDepositAccount.BridgingInitiated(1);
     (, IUniversalDepositAccount.OFTReceipt memory oftReceipt) =
-      IUniversalDepositAccount(udAccount).settle{value: valueToSend}(fixture.token);
+      IUniversalDepositAccount(udAccount).settle{value: valueToSend}(fixture.token, maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertEq(ERC20(fixture.token).balanceOf(udAccount), initialUdAccountTokenBalance - oftReceipt.amountSentLD);
@@ -135,14 +138,14 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
     assertEq(OFTTokenERC20(fixture.token).balanceOf(udAccount), amountLD);
 
     (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
-      OFTTokenERC20(fixture.token).balanceOf(udAccount), fixture.stargate
+      OFTTokenERC20(fixture.token).balanceOf(udAccount), fixture.stargate, maxSlippage
     );
     assertGe(valueToSend, 0);
 
     vm.prank(caller);
     vm.expectEmit();
     emit IUniversalDepositAccount.BridgingInitiated(1);
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(fixture.token);
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(fixture.token, maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertGe(OFTTokenERC20(fixture.token).balanceOf(udAccount), 0);
@@ -161,7 +164,7 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
     address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, poolChainId));
 
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle(address(testERC20));
+    IUniversalDepositAccount(udAccount).settle(address(testERC20), maxSlippage);
 
     vm.prank(alice);
 
@@ -169,7 +172,7 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
 
     vm.startPrank(caller);
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle(address(testERC20));
+    IUniversalDepositAccount(udAccount).settle(address(testERC20), maxSlippage);
     vm.expectRevert();
     IUniversalDepositAccount(udAccount).withdrawToken(address(testERC20), 1e18);
     vm.stopPrank();
@@ -212,20 +215,21 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
     assertEq(ERC20(fixture.token).balanceOf(udAccount), amountLD);
     uint256 initialUdAccountTokenBalance = ERC20(fixture.token).balanceOf(udAccount);
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(ERC20(fixture.token).balanceOf(udAccount), fixture.stargate);
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      ERC20(fixture.token).balanceOf(udAccount), fixture.stargate, maxSlippage
+    );
     assertGe(valueToSend, 0);
 
     vm.prank(caller);
     vm.expectRevert();
     emit InsufficientNativeToken(0, valueToSend);
-    (, IUniversalDepositAccount.OFTReceipt memory oftReceipt) =
-      IUniversalDepositAccount(udAccount).settle(fixture.token);
+    IUniversalDepositAccount(udAccount).settle(fixture.token, maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
     assertEq(ERC20(fixture.token).balanceOf(udAccount), initialUdAccountTokenBalance);
     assertEq(IStargatePool(fixture.stargate).poolBalance(), 0);
   }
+
 
   /**
    * @notice Test proxy initialization and metadata retrieval

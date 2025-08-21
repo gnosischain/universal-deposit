@@ -7,9 +7,7 @@ import {UniversalDepositAccount} from '../../src/UniversalDepositAccount.sol';
 import {UniversalDepositManager} from '../../src/UniversalDepositManager.sol';
 import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
 import {ERC20} from '../../src/test/ERC20.sol';
-import {
-  Credit
-} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/ICreditMessagingHandler.sol';
+import {Credit} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/ICreditMessagingHandler.sol';
 import {StargateOFTUSDC} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/usdc/StargateOFTUSDC.sol';
 
 import {Utils} from '../../src/utils/Utils.sol';
@@ -39,6 +37,8 @@ contract forkTestOFTChain is Test {
   uint32 dstEid = uint32(vm.envUint('DST_EID'));
   uint256 dstChainId = vm.envUint('DST_CHAINID');
   uint256 stargateConversionRate = Utils._getStargateConversionRate(oftToken.decimals());
+
+  uint256 maxSlippage = 50; // 0.5%
 
   function setUp() public {
     universalDepositImplementation = new UniversalDepositAccount();
@@ -89,12 +89,13 @@ contract forkTestOFTChain is Test {
     vm.prank(alice);
     oftToken.transfer(udAccount, amountLD);
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(oftToken.balanceOf(udAccount), address(stargateOftToken));
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      oftToken.balanceOf(udAccount), address(stargateOftToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken), maxSlippage);
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertEq(oftToken.balanceOf(udAccount), 0);
   }
@@ -117,12 +118,13 @@ contract forkTestOFTChain is Test {
 
     uint256 initialAccountBalance = oftToken.balanceOf(udAccount);
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(initialAccountBalance, address(stargateOftToken));
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      initialAccountBalance, address(stargateOftToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken), maxSlippage);
     // Verify first settle partially succeeded
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     uint256 remainingBalance = oftToken.balanceOf(udAccount);
@@ -133,11 +135,12 @@ contract forkTestOFTChain is Test {
     credits[0] = Credit({srcEid: dstEid, amount: originalCredit}); // Add enough credit for remaining amount
     stargateOftToken.receiveCredits(dstEid, credits);
 
-    (uint256 valueToSend2nd,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(initialAccountBalance, address(stargateOftToken));
+    (uint256 valueToSend2nd,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      initialAccountBalance, address(stargateOftToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend2nd}(address(oftToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend2nd}(address(oftToken), maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 2);
     assertEq(oftToken.balanceOf(udAccount), 0, 'Should bridge all oft token on ud account');
@@ -167,21 +170,23 @@ contract forkTestOFTChain is Test {
 
     uint256 initialAccountBalance = oftToken.balanceOf(udAccount);
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(initialAccountBalance, address(stargateOftToken));
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      initialAccountBalance, address(stargateOftToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken), maxSlippage);
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertEq(oftToken.balanceOf(udAccount), 0);
 
-    (valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(initialAccountBalance, address(stargateOftToken));
+    (valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      initialAccountBalance, address(stargateOftToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(oftToken), maxSlippage);
   }
 
   /**
@@ -197,7 +202,7 @@ contract forkTestOFTChain is Test {
     address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, dstChainId));
 
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle(address(testERC20));
+    IUniversalDepositAccount(udAccount).settle(address(testERC20), maxSlippage);
 
     vm.prank(alice);
 
@@ -205,7 +210,7 @@ contract forkTestOFTChain is Test {
 
     vm.startPrank(caller);
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle(address(testERC20));
+    IUniversalDepositAccount(udAccount).settle(address(testERC20), maxSlippage);
     vm.expectRevert();
     IUniversalDepositAccount(udAccount).withdrawToken(address(testERC20), 1e18);
     vm.stopPrank();

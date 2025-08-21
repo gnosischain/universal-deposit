@@ -22,32 +22,6 @@ contract UniversalDepositManagerTest is Test {
   }
 
   /**
-   * @notice Test basic token route configuration
-   * @dev Verifies route setting, token support, and route validation
-   */
-  function testTokenRoute(uint256 srcChainId, uint256 dstChainId) public {
-    address srcToken = makeAddr('srcToken');
-    address dstToken = makeAddr('dstToken');
-
-    UniversalDepositManager.TokenRoute memory tokenRoute = UniversalDepositManager.TokenRoute({
-      srcToken: srcToken,
-      dstToken: dstToken,
-      srcChainId: srcChainId,
-      dstChainId: dstChainId
-    });
-
-    vm.prank(owner);
-    universalDepositManager.setRoute(tokenRoute);
-
-    assertTrue(universalDepositManager.isTokenSupported(srcToken));
-    assertTrue(universalDepositManager.isRouteSupported(universalDepositManager.getRouteKey(tokenRoute)));
-    assertTrue(universalDepositManager.getRoute(srcToken).dstToken == dstToken);
-    assertTrue(universalDepositManager.getRoute(srcToken).srcChainId == srcChainId);
-    assertTrue(universalDepositManager.getRoute(srcToken).dstChainId == dstChainId);
-    assertFalse(universalDepositManager.isTokenSupported(dstToken));
-  }
-
-  /**
    * @notice Test complete Stargate route configuration
    * @dev Verifies Stargate route setting, EID mapping, and validation
    */
@@ -77,39 +51,45 @@ contract UniversalDepositManagerTest is Test {
     universalDepositManager.setChainIdEid(srcChainId, srcEid);
     universalDepositManager.setChainIdEid(dstChainId, dstEid);
 
-    assertTrue(universalDepositManager.isTokenSupported(stargateRoute.tokenRoute.srcToken));
-    assertFalse(universalDepositManager.isTokenSupported(stargateRoute.srcStargateToken));
-    assertFalse(universalDepositManager.isTokenSupported(stargateRoute.dstStargateToken));
-    assertTrue(universalDepositManager.isRouteSupported(universalDepositManager.getRouteKey(stargateRoute.tokenRoute)));
+    assertTrue(universalDepositManager.isSrcTokenSupported(stargateRoute.tokenRoute.srcToken));
+    assertFalse(universalDepositManager.isSrcTokenSupported(stargateRoute.srcStargateToken));
+    assertFalse(universalDepositManager.isSrcTokenSupported(stargateRoute.dstStargateToken));
+    assertTrue(universalDepositManager.isSGRouteSupported(universalDepositManager.getSGRouteKey(stargateRoute)));
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).srcStargateToken
-        == stargateRoute.srcStargateToken
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .srcStargateToken == stargateRoute.srcStargateToken
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).dstStargateToken
-        == stargateRoute.dstStargateToken
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .dstStargateToken == stargateRoute.dstStargateToken
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).srcEid == stargateRoute.srcEid
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .srcEid == stargateRoute.srcEid
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).dstEid == stargateRoute.dstEid
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .dstEid == stargateRoute.dstEid
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).tokenRoute.srcToken
-        == stargateRoute.tokenRoute.srcToken
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .tokenRoute
+        .srcToken == stargateRoute.tokenRoute.srcToken
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).tokenRoute.dstToken
-        == stargateRoute.tokenRoute.dstToken
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .tokenRoute
+        .dstToken == stargateRoute.tokenRoute.dstToken
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).tokenRoute.srcChainId
-        == stargateRoute.tokenRoute.srcChainId
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .tokenRoute
+        .srcChainId == stargateRoute.tokenRoute.srcChainId
     );
     assertTrue(
-      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken).tokenRoute.dstChainId
-        == stargateRoute.tokenRoute.dstChainId
+      universalDepositManager.getStargateRoute(stargateRoute.tokenRoute.srcToken, stargateRoute.tokenRoute.dstChainId)
+        .tokenRoute
+        .dstChainId == stargateRoute.tokenRoute.dstChainId
     );
     assertEq(universalDepositManager.chainIdToEidMap(srcChainId), srcEid);
     assertEq(universalDepositManager.chainIdToEidMap(dstChainId), dstEid);

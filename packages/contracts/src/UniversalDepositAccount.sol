@@ -53,8 +53,8 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
   event WithdrawUnsupportedToken(address indexed token, uint256 indexed amount);
 
   /// @notice Thrown when an invalid address (zero address) is provided
-  /// @param givernAddress The invalid address that was provided
-  error InvalidAddress(address givernAddress);
+  /// @param givenAddress The invalid address that was provided
+  error InvalidAddress(address givenAddress);
 
   /// @notice Thrown when an operation involves zero or insufficient amount
   /// @param amount The insufficient amount provided
@@ -68,6 +68,11 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
   /// @param balance The current native token balance
   /// @param required The required native token amount
   error InsufficientNativeToken(uint256 balance, uint256 required);
+
+  /// @notice Thrown when the slipppage is too high from the minimum expected received amount
+  /// @param minAmount minimum amount that should expect to receive
+  /// @param actualReceivedAmount actual amount that should receive
+  error SlippageToHigh(uint256 minAmount, uint256 actualReceivedAmount);
 
   /// @notice Thrown when ETH is sent to the contract (not supported)
   error ETHNotSupported();
@@ -106,15 +111,18 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
    * @dev Queries Stargate for accurate fee estimation and minimum amount calculations
    * @param amount The amount of tokens to bridge
    * @param srcStargateToken The Stargate pool/OFT address for the source token
+   * @param maxSlippage max slippage allowed, 10000 = 100%
    * @return valueToSend The total native token amount needed
    * @return sendParam The complete SendParam struct for the Stargate transaction
    * @return messagingFee The LayerZero messaging fee breakdown
    */
   function quoteStargateFee(
     uint256 amount,
-    address srcStargateToken
+    address srcStargateToken,
+    uint256 maxSlippage
   ) public view returns (uint256 valueToSend, SendParam memory sendParam, MessagingFee memory messagingFee) {
     if (amount == 0) revert AmountNotEnough(amount);
+
     sendParam = SendParam({
       dstEid: udManager.chainIdToEidMap(dstChainId),
       to: Utils._addressToBytes32(recipient),
@@ -127,6 +135,10 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
 
     // Get accurate minimum amount from quote
     (,, OFTReceipt memory receipt) = IStargate(srcStargateToken).quoteOFT(sendParam);
+    uint256 minReceivedAmount = (receipt.amountSentLD * (10_000 - maxSlippage)) / 10_000;
+    if (receipt.amountReceivedLD < minReceivedAmount) {
+      revert SlippageToHigh(minReceivedAmount, receipt.amountReceivedLD);
+    }
     sendParam.minAmountLD = receipt.amountReceivedLD;
 
     // Get messaging fee
@@ -154,7 +166,7 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
    * @param amount The amount to withdraw (must be greater than 0)
    */
   function withdrawToken(address token, uint256 amount) external onlyOwner {
-    if (udManager.isTokenSupported(token) || token == address(0)) revert InvalidToken(token);
+    if (udManager.isSrcTokenSupported(token) || token == address(0)) revert InvalidToken(token);
     if (amount == 0) revert AmountNotEnough(amount);
     IERC20(token).transfer(owner(), amount);
 
@@ -166,13 +178,16 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
    * @dev Can be called by anyone who provides sufficient native tokens for fees.
    *      Automatically bridges the full balance of the specified token to the configured recipient.
    * @param srcToken The source token address to bridge
+   * @param maxSlippage max slippage allowed, 10000 = 100%
    * @return msgReceipt LayerZero messaging receipt with transaction details
    * @return oftReceipt OFT receipt with amount and fee information
    */
   function settle(
-    address srcToken
+    address srcToken,
+    uint256 maxSlippage
   ) public payable returns (MessagingReceipt memory msgReceipt, OFTReceipt memory oftReceipt) {
-    IUniversalDepositManager.StargateTokenRoute memory stargateTokenRoute = udManager.getStargateRoute(srcToken);
+    IUniversalDepositManager.StargateTokenRoute memory stargateTokenRoute =
+      udManager.getStargateRoute(srcToken, dstChainId);
 
     uint256 bridgeAmount = IERC20(srcToken).balanceOf(address(this));
 
@@ -187,7 +202,7 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
 
     IERC20(srcToken).approve(stargateTokenRoute.srcStargateToken, bridgeAmount);
     (uint256 valueToSend, SendParam memory sendParam, MessagingFee memory messagingFee) =
-      quoteStargateFee(bridgeAmount, stargateTokenRoute.srcStargateToken);
+      quoteStargateFee(bridgeAmount, stargateTokenRoute.srcStargateToken, maxSlippage);
     if (address(this).balance < valueToSend) revert InsufficientNativeToken(address(this).balance, valueToSend);
 
     (msgReceipt, oftReceipt,) =

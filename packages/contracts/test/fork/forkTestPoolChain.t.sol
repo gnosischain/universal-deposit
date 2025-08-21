@@ -6,9 +6,7 @@ import {UniversalDepositAccount} from '../../src/UniversalDepositAccount.sol';
 import {UniversalDepositManager} from '../../src/UniversalDepositManager.sol';
 import {IUniversalDepositAccount} from '../../src/interfaces/IUniversalDepositAccount.sol';
 import {ERC20} from '../../src/test/ERC20.sol';
-import {
-  Credit
-} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/ICreditMessagingHandler.sol';
+import {Credit} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/interfaces/ICreditMessagingHandler.sol';
 import {StargatePoolUSDC} from '@stargatefinance/stargate-v2/packages/stg-evm-v2/src/usdc/StargatePoolUSDC.sol';
 import {Test} from 'forge-std/Test.sol';
 
@@ -38,6 +36,7 @@ contract forkTestPoolChain is Test {
   uint32 dstEid = uint32(vm.envUint('DST_EID'));
   uint256 dstChainId = vm.envUint('DST_CHAINID');
   uint256 stargateConversionRate = Utils._getStargateConversionRate(poolToken.decimals());
+  uint256 maxSlippage = 50; // 0.5%
 
   event BalanceIsZero();
   event CurrentCredit(uint64 credit);
@@ -97,12 +96,13 @@ contract forkTestPoolChain is Test {
     poolToken.transfer(udAccount, amountLD);
     uint256 initialStargatePoolBalance = ERC20(poolToken).balanceOf(address(stargatePoolToken));
     uint256 initialAccountBalance = poolToken.balanceOf(udAccount);
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(poolToken.balanceOf(udAccount), address(stargatePoolToken));
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      poolToken.balanceOf(udAccount), address(stargatePoolToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
     vm.prank(caller);
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken), maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertLe(ERC20(poolToken).balanceOf(address(stargatePoolToken)), initialStargatePoolBalance + amountLD); // Eq initialStargatePoolBalance + amountLD - protocol fee
@@ -115,10 +115,11 @@ contract forkTestPoolChain is Test {
     credits[0] = Credit({srcEid: dstEid, amount: originalCredit}); // Add enough credit for remaining amount
     stargatePoolToken.receiveCredits(dstEid, credits);
 
-    (valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(poolToken.balanceOf(udAccount), address(stargatePoolToken));
+    (valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      poolToken.balanceOf(udAccount), address(stargatePoolToken), maxSlippage
+    );
 
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken), maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 2);
 
@@ -127,7 +128,7 @@ contract forkTestPoolChain is Test {
     vm.prank(caller);
     vm.expectRevert();
     emit BalanceIsZero();
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken), maxSlippage);
   }
 
   function testSettleToPoolChain(
@@ -149,12 +150,13 @@ contract forkTestPoolChain is Test {
 
     uint256 initialStargatePoolBalance = ERC20(poolToken).balanceOf(address(stargatePoolToken));
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(poolToken.balanceOf(udAccount), address(stargatePoolToken));
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      poolToken.balanceOf(udAccount), address(stargatePoolToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken), maxSlippage);
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertEq(ERC20(poolToken).balanceOf(address(stargatePoolToken)), initialStargatePoolBalance + amountLD);
@@ -186,22 +188,24 @@ contract forkTestPoolChain is Test {
 
     uint256 initialAccountBalance = poolToken.balanceOf(udAccount);
 
-    (uint256 valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(initialAccountBalance, address(stargatePoolToken));
+    (uint256 valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      initialAccountBalance, address(stargatePoolToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 0);
 
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken), maxSlippage);
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     assertEq(poolToken.balanceOf(udAccount), 0);
 
-    (valueToSend,,) =
-      IUniversalDepositAccount(udAccount).quoteStargateFee(initialAccountBalance, address(stargatePoolToken));
+    (valueToSend,,) = IUniversalDepositAccount(udAccount).quoteStargateFee(
+      initialAccountBalance, address(stargatePoolToken), maxSlippage
+    );
 
     assertEq(IUniversalDepositAccount(udAccount).nonce(), 1);
     vm.expectRevert();
     emit BalanceIsZero();
-    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken));
+    IUniversalDepositAccount(udAccount).settle{value: valueToSend}(address(poolToken), maxSlippage);
   }
 
   /**
@@ -217,7 +221,7 @@ contract forkTestPoolChain is Test {
     address payable udAccount = payable(proxyFactory.createUniversalAccount(alice, alice, dstChainId));
 
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle(address(testERC20));
+    IUniversalDepositAccount(udAccount).settle(address(testERC20), maxSlippage);
 
     vm.prank(alice);
 
@@ -225,7 +229,7 @@ contract forkTestPoolChain is Test {
 
     vm.startPrank(caller);
     vm.expectRevert();
-    IUniversalDepositAccount(udAccount).settle(address(testERC20));
+    IUniversalDepositAccount(udAccount).settle(address(testERC20), maxSlippage);
     vm.expectRevert();
     IUniversalDepositAccount(udAccount).withdrawToken(address(testERC20), 1e18);
     vm.stopPrank();

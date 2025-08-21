@@ -159,9 +159,10 @@ IERC20(sourceToken).transfer(userAccount, amount);
 // 4. Anyone can trigger settlement (paying fees)
 uint256 feeRequired = IUniversalDepositAccount(userAccount).quoteStargateFee(
     amount,
-    sourceStargatePool
+    sourceStargatePool,
+    maxSlippage
 );
-IUniversalDepositAccount(userAccount).settle{value: feeRequired}(sourceToken);
+IUniversalDepositAccount(userAccount).settle{value: feeRequired}(sourceToken, maxSlippage);
 ```
 
 ### Key Interfaces
@@ -174,8 +175,8 @@ IUniversalDepositAccount(userAccount).settle{value: feeRequired}(sourceToken);
 
 #### UniversalDepositAccount
 
--   `settle(address)` - Bridge entire balance of specified token
--   `quoteStargateFee(uint256, address)` - Get required native token fee
+-   `settle(address, uint256)` - Bridge entire balance of specified token
+-   `quoteStargateFee(uint256, address, uint256)` - Get required native token fee, updated sendParam
 -   `withdrawToken(address, uint256)` - Emergency withdrawal (owner only)
 
 #### ProxyFactory
