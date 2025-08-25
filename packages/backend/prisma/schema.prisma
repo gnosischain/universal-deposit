@@ -1,0 +1,67 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Order {
+  id                     String   @id @default(uuid())
+  universalAddress       String   @db.VarChar(42)
+  sourceChainId          Int
+  destinationChainId     Int
+  recipientAddress       String   @db.VarChar(42)
+  sourceTokenAddress     String   @db.VarChar(42)
+  destinationTokenAddress String  @db.VarChar(42)
+  ownerAddress           String   @db.VarChar(42)
+  nonce                  Int
+  amount                 Decimal  @db.Decimal(78, 0)
+  status                 OrderStatus
+  transactionHash        String?  @db.VarChar(66)
+  bridgeTransactionUrl   String?
+  message                String?
+  retries                Int      @default(0)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@unique([universalAddress, sourceChainId, nonce])
+  @@index([status])
+  @@index([universalAddress])
+  @@index([createdAt])
+}
+
+enum OrderStatus {
+  CREATED
+  DEPLOYED
+  COMPLETED
+  FAILED
+}
+
+model CachedAddress {
+  universalAddress    String   @id @db.VarChar(42)
+  ownerAddress        String   @db.VarChar(42)
+  recipientAddress    String   @db.VarChar(42)
+  destinationChainId  Int
+  sourceChainId       Int
+  expiresAt           DateTime
+  createdAt           DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model DeadLetterQueue {
+  id             String   @id @default(uuid())
+  orderId        String?
+  queueName      String
+  failureReason  String
+  errorDetails   Json?
+  retryCount     Int
+  createdAt      DateTime @default(now())
+  resolvedAt     DateTime?
+
+  // optional relation, not strictly required now
+  // order          Order?   @relation(fields: [orderId], references: [id])
+}
