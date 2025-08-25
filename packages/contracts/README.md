@@ -196,6 +196,21 @@ IUniversalDepositAccount(userAccount).settle{value: feeRequired}(sourceToken, ma
 -   Fork tests demonstrate integration with Stargate V2 in `test/fork/`
 -   Run with `pnpm test:unit` or `pnpm test:fork`
 
+## Deployment
+
+1. Gnosis Chain
+2. Arbitrum
+3. Base
+4. Ethereum
+5. Optimism
+6. EDU Chain
+
+| Contract                | Address                                    |
+| ----------------------- | ------------------------------------------ |
+| UniversalDepositAccount | 0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10 |
+| UniversalDepositManager | 0x72439FDa3a67988b241060c0A0d3Cb8AAC123345 |
+| ProxyFactory            | 0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21 |
+
 ## References
 
 -   [Foundry docs](https://book.getfoundry.sh/forge/)
