@@ -93,13 +93,6 @@ The Universal Deposit Backend enables seamless cross-chain USDC transfers betwee
 - Redis 7+ (via Docker)
 - RabbitMQ 3+ (via Docker)
 
-### External Services
-
-- EDU chain RPC endpoint(s)
-- Gnosis Chain RPC endpoint
-- Private keys for deployment/settlement (funded manually)
-- Deployed contracts (ProxyFactory, UD Manager, USDC, Stargate token)
-
 ## 🔧 Installation
 
 ### 1. Clone and Navigate
@@ -131,37 +124,9 @@ pnpm --filter @universal-deposit/backend prisma:generate
 pnpm --filter @universal-deposit/backend db:migrate
 ```
 
-## ⚙️ Configuration
-
-Key environment variables (see .env.example for full list):
-
-- DATABASE_URL, REDIS_URL, RABBITMQ_URL
-- API_PORT, API_SECRET_KEY
-- EDU/CHIDAO/GNOSIS RPC URLs + chain IDs
-- Contract addresses: ProxyFactory, UD Manager, USDC, Stargate token
-- DEPLOYMENT_PRIVATE_KEY, SETTLEMENT_PRIVATE_KEY
-- RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX_REQUESTS
-- RESIDUAL_DELAY_SCHEDULE (ms)
-- VERIFY_DEST_CHAIN, ENABLE_MAINNET_TX
-- RUN_API, RUN_BALANCE_WATCHER, RUN_DEPLOY_WORKER, RUN_SETTLE_WORKER
-
 ## 🛠️ Development
 
 ### Available Scripts
-
-#### From Project Root
-
-```bash
-# Complete setup and development
-pnpm backend:setup          # Install + Prisma generate + migrate
-pnpm backend:dev             # Start full development environment
-pnpm backend:down            # Stop development environment
-pnpm backend:logs            # View backend container logs
-pnpm backend:health          # Check backend health
-pnpm backend:db:reset        # Reset database
-```
-
-#### From Backend Directory
 
 ```bash
 # Setup and development
@@ -230,17 +195,6 @@ Key endpoints (planned/partially stubbed):
 - POST /api/v1/orders/generate-id
 - GET /api/v1/health
 - GET /metrics
-
-## 🧪 Testing
-
-- Local integration can point to testnet/mainnet RPCs. By default, VERIFY_DEST_CHAIN=false and ENABLE_MAINNET_TX=false to avoid accidental txs.
-- CI will use foundry/hardhat for write-path tests.
-
-## 🚀 Deployment
-
-- Node 22 LTS, Docker base image node:22-alpine
-- Single image with service toggles (RUN\_\* envs)
-- RabbitMQ topology uses TTL-based delay queues, no delayed-message plugin required
 
 ## 📊 Monitoring
 
