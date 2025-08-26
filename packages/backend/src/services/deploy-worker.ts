@@ -11,6 +11,7 @@ import {
 import { publicClientFor, getProxyFactoryAddress } from "../blockchain/utils";
 import { startHeartbeat } from "../monitoring/heartbeat";
 import { walletClientFor } from "../blockchain/clients";
+import { config } from "../config/env";
 import ProxyFactoryAbi from "../blockchain/contracts/ProxyFactory.abi.json" with { type: "json" };
 
 /**
@@ -23,8 +24,8 @@ import ProxyFactoryAbi from "../blockchain/contracts/ProxyFactory.abi.json" with
  * - Otherwise ack and skip
  */
 export async function startDeployWorker(): Promise<void> {
-  // Start heartbeat for this worker (30s interval)
-  startHeartbeat("deploy-worker", 30000);
+  // Start heartbeat for this worker
+  startHeartbeat("deploy-worker", config.HEARTBEAT_INTERVAL_MS);
 
   const channel = createChannel();
 

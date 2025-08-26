@@ -107,6 +107,16 @@ const EnvSchema = z.object({
   MIN_BRIDGE_AMOUNT: optionalNumberFromString.default("1000000"), // 1 USDC (6 decimals)
   MAX_BRIDGE_AMOUNT: optionalNumberFromString.default("10000000000"), // 10k USDC
   BALANCE_CHECK_INTERVAL_MS: optionalNumberFromString.default("30000"),
+
+  // Service configuration
+  HEARTBEAT_INTERVAL_MS: optionalNumberFromString.default("5000"), // 5 seconds
+  SLIPPAGE_PERCENTAGE: optionalNumberFromString.default("500"), // 0.5% = 500 basis points
+
+  // Authentication
+  DEVELOPER_MASTER_KEY: z
+    .string()
+    .min(32, "DEVELOPER_MASTER_KEY must be at least 32 characters")
+    .default("dev-master-key-change-in-production-32chars"),
 });
 
 export type AppConfig = z.infer<typeof EnvSchema>;

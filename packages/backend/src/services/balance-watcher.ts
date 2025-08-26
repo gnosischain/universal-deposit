@@ -171,7 +171,7 @@ export async function startBalanceWatcher(): Promise<void> {
     },
     "BalanceWatcher starting",
   );
-  startHeartbeat("balance-watcher", config.BALANCE_CHECK_INTERVAL_MS);
+  startHeartbeat("balance-watcher", config.HEARTBEAT_INTERVAL_MS);
 
   const tick = async (): Promise<void> => {
     if (running) return;

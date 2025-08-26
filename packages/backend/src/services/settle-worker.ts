@@ -26,8 +26,8 @@ import { config } from "../config/env";
  * - For partial liquidity handling in future: schedule enqueueResidualDelay(orderId, tierIndex)
  */
 export async function startSettleWorker(): Promise<void> {
-  // Start heartbeat for this worker (30s interval)
-  startHeartbeat("settle-worker", 30000);
+  // Start heartbeat for this worker
+  startHeartbeat("settle-worker", config.HEARTBEAT_INTERVAL_MS);
 
   const channel = createChannel();
 

@@ -1,26 +1,442 @@
 [
   {
-    "type": "function",
-    "name": "nonce",
-    "stateMutability": "view",
-    "inputs": [],
-    "outputs": [{ "name": "", "type": "uint256" }]
+    "type": "receive",
+    "stateMutability": "payable"
   },
   {
     "type": "function",
-    "name": "settle",
-    "stateMutability": "payable",
-    "inputs": [{ "name": "sourceToken", "type": "address" }],
-    "outputs": []
+    "name": "VERSION",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "uint8"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "dstChainId",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "initialize",
+    "inputs": [
+      {
+        "name": "_owner",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_recipient",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_dstChainId",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "_udManager",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "nonce",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
     "type": "function",
     "name": "quoteStargateFee",
-    "stateMutability": "view",
     "inputs": [
-      { "name": "token", "type": "address" },
-      { "name": "amount", "type": "uint256" }
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "srcStargateToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "maxSlippage",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
     ],
-    "outputs": [{ "name": "fee", "type": "uint256" }]
+    "outputs": [
+      {
+        "name": "valueToSend",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "sendParam",
+        "type": "tuple",
+        "internalType": "struct IUniversalDepositAccount.SendParam",
+        "components": [
+          {
+            "name": "dstEid",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "to",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "amountLD",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "minAmountLD",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "extraOptions",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "composeMsg",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "oftCmd",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      },
+      {
+        "name": "messagingFee",
+        "type": "tuple",
+        "internalType": "struct IUniversalDepositAccount.MessagingFee",
+        "components": [
+          {
+            "name": "nativeFee",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "lzTokenFee",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "recipient",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "renounceOwnership",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settle",
+    "inputs": [
+      {
+        "name": "srcToken",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "maxSlippage",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "msgReceipt",
+        "type": "tuple",
+        "internalType": "struct IUniversalDepositAccount.MessagingReceipt",
+        "components": [
+          {
+            "name": "guid",
+            "type": "bytes32",
+            "internalType": "bytes32"
+          },
+          {
+            "name": "nonce",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "fee",
+            "type": "tuple",
+            "internalType": "struct IUniversalDepositAccount.MessagingFee",
+            "components": [
+              {
+                "name": "nativeFee",
+                "type": "uint256",
+                "internalType": "uint256"
+              },
+              {
+                "name": "lzTokenFee",
+                "type": "uint256",
+                "internalType": "uint256"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "oftReceipt",
+        "type": "tuple",
+        "internalType": "struct IUniversalDepositAccount.OFTReceipt",
+        "components": [
+          {
+            "name": "amountSentLD",
+            "type": "uint256",
+            "internalType": "uint256"
+          },
+          {
+            "name": "amountReceivedLD",
+            "type": "uint256",
+            "internalType": "uint256"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "payable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "newOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "udManager",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "withdrawToken",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "BridgingInitiated",
+    "inputs": [
+      {
+        "name": "nonce",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "Initialized",
+    "inputs": [
+      {
+        "name": "version",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "OwnershipTransferred",
+    "inputs": [
+      {
+        "name": "previousOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newOwner",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "WithdrawUnsupportedToken",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "amount",
+        "type": "uint256",
+        "indexed": true,
+        "internalType": "uint256"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "AmountNotEnough",
+    "inputs": [
+      {
+        "name": "amount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ETHNotSupported",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "InsufficientNativeToken",
+    "inputs": [
+      {
+        "name": "balance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "required",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidAddress",
+    "inputs": [
+      {
+        "name": "givenAddress",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "InvalidToken",
+    "inputs": [
+      {
+        "name": "token",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SlippageToHigh",
+    "inputs": [
+      {
+        "name": "minAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "actualReceivedAmount",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
   }
 ]
