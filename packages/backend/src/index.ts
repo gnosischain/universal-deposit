@@ -5,6 +5,7 @@ import { startAPIServer } from "./api/server";
 import { startBalanceWatcher } from "./services/balance-watcher";
 import { startDeployWorker } from "./services/deploy-worker";
 import { startSettleWorker } from "./services/settle-worker";
+import { runRecovery } from "./services/recovery";
 
 async function main(): Promise<void> {
   const run = {
@@ -34,6 +35,11 @@ async function main(): Promise<void> {
   if (run.settle) tasks.push(startSettleWorker());
 
   await Promise.all(tasks);
+
+  // Run recovery system after workers are started to ensure they can process recovered orders
+  if (run.settle) {
+    await runRecovery();
+  }
 }
 
 main().catch((err) => {

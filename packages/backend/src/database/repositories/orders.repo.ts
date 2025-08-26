@@ -168,3 +168,19 @@ export async function updateOrderStatus(
     },
   });
 }
+
+/**
+ * Find incomplete orders for recovery system
+ * Returns orders that are not COMPLETED or FAILED
+ */
+export async function findIncompleteOrders(limit = 100) {
+  return prisma.order.findMany({
+    where: {
+      status: {
+        notIn: [OrderStatus.COMPLETED, OrderStatus.FAILED],
+      },
+    },
+    orderBy: { createdAt: "asc" },
+    take: limit,
+  });
+}
