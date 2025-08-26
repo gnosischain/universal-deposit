@@ -35,6 +35,121 @@ import { enqueueDeploy } from "../queues/publishers";
 
 let running = false;
 
+async function processAddress(address: string): Promise<void> {
+  try {
+    const rec = await getUDA(address);
+    if (!rec) {
+      // Hash expired; prune from index
+      await pruneIndex(address);
+      return;
+    }
+
+    const client = publicClientFor(rec.sourceChainId);
+    const usdcSrc = getSourceUsdcAddress(rec.sourceChainId);
+    const usdcDst = getDestinationUsdcAddress(rec.destinationChainId);
+    if (!usdcSrc || !usdcDst) {
+      logger.warn(
+        {
+          srcChainId: rec.sourceChainId,
+          dstChainId: rec.destinationChainId,
+          usdcSrc,
+          usdcDst,
+        },
+        "BalanceWatcher: USDC address not configured for chain",
+      );
+      return;
+    }
+
+    // Read USDC balance of the UDA
+    const balance = (await client.readContract({
+      address: usdcSrc as Address,
+      abi: ERC20Abi as any,
+      functionName: "balanceOf",
+      args: [rec.universalAddress as Address],
+    })) as bigint;
+
+    // Update last detected balance for observability
+    await updateUDAState(rec.universalAddress, {
+      lastDetectedBalance: balance,
+    });
+
+    if (balance < BigInt(config.MIN_BRIDGE_AMOUNT)) {
+      logger.debug(
+        {
+          uda: rec.universalAddress,
+          balance: balance.toString(),
+          min: config.MIN_BRIDGE_AMOUNT,
+        },
+        "BalanceWatcher: balance below threshold",
+      );
+      return;
+    }
+
+    // Read on-chain UDA nonce
+    const nonce = (await client.readContract({
+      address: rec.universalAddress as Address,
+      abi: UDAAbi as any,
+      functionName: "nonce",
+      args: [],
+    })) as bigint;
+
+    // Idempotency guard: skip if this nonce was already processed
+    if (rec.lastProcessedNonce === nonce) {
+      logger.debug(
+        { uda: rec.universalAddress, nonce: nonce.toString() },
+        "BalanceWatcher: nonce already processed, skipping",
+      );
+      return;
+    }
+
+    // Compute deterministic order id per spec
+    const orderId = generateOrderId({
+      universalAddress: rec.universalAddress,
+      ownerAddress: rec.ownerAddress,
+      recipientAddress: rec.recipientAddress,
+      destinationTokenAddress: usdcDst,
+      destinationChainId: rec.destinationChainId,
+      nonce,
+    });
+
+    // Create (idempotent) order and enqueue for deployment
+    await ensureOrder({
+      id: orderId,
+      universalAddress: rec.universalAddress,
+      sourceChainId: rec.sourceChainId,
+      destinationChainId: rec.destinationChainId,
+      recipientAddress: rec.recipientAddress,
+      sourceTokenAddress: usdcSrc,
+      destinationTokenAddress: usdcDst,
+      ownerAddress: rec.ownerAddress,
+      nonce: Number(nonce),
+      amount: balance,
+      message: "Created from BalanceWatcher",
+    });
+
+    ordersCreated.inc();
+    await enqueueDeploy(orderId);
+
+    // Persist last processed nonce (do not delete cache; TTL will clear after 24h unless re-registered)
+    await updateUDAState(rec.universalAddress, { lastProcessedNonce: nonce });
+
+    logger.info(
+      {
+        uda: rec.universalAddress,
+        orderId,
+        nonce: nonce.toString(),
+        amount: balance.toString(),
+      },
+      "BalanceWatcher: order created and enqueued",
+    );
+  } catch (err) {
+    logger.error(
+      { err, uda: address },
+      "BalanceWatcher: error processing address",
+    );
+  }
+}
+
 async function processOnce() {
   const addrs = await listUDAAddresses();
   if (!addrs.length) {
@@ -47,120 +162,8 @@ async function processOnce() {
     "BalanceWatcher: scanning cached addresses",
   );
 
-  for (const address of addrs) {
-    try {
-      const rec = await getUDA(address);
-      if (!rec) {
-        // Hash expired; prune from index
-        await pruneIndex(address);
-        continue;
-      }
-
-      const client = publicClientFor(rec.sourceChainId);
-      const usdcSrc = getSourceUsdcAddress(rec.sourceChainId);
-      const usdcDst = getDestinationUsdcAddress(rec.destinationChainId);
-      if (!usdcSrc || !usdcDst) {
-        logger.warn(
-          {
-            srcChainId: rec.sourceChainId,
-            dstChainId: rec.destinationChainId,
-            usdcSrc,
-            usdcDst,
-          },
-          "BalanceWatcher: USDC address not configured for chain",
-        );
-        continue;
-      }
-
-      // Read USDC balance of the UDA
-      const balance = (await client.readContract({
-        address: usdcSrc as Address,
-        abi: ERC20Abi as any,
-        functionName: "balanceOf",
-        args: [rec.universalAddress as Address],
-      })) as bigint;
-
-      // Update last detected balance for observability
-      await updateUDAState(rec.universalAddress, {
-        lastDetectedBalance: balance,
-      });
-
-      if (balance < BigInt(config.MIN_BRIDGE_AMOUNT)) {
-        logger.debug(
-          {
-            uda: rec.universalAddress,
-            balance: balance.toString(),
-            min: config.MIN_BRIDGE_AMOUNT,
-          },
-          "BalanceWatcher: balance below threshold",
-        );
-        continue;
-      }
-
-      // Read on-chain UDA nonce
-      const nonce = (await client.readContract({
-        address: rec.universalAddress as Address,
-        abi: UDAAbi as any,
-        functionName: "nonce",
-        args: [],
-      })) as bigint;
-
-      // Idempotency guard: skip if this nonce was already processed
-      if (rec.lastProcessedNonce === nonce) {
-        logger.debug(
-          { uda: rec.universalAddress, nonce: nonce.toString() },
-          "BalanceWatcher: nonce already processed, skipping",
-        );
-        continue;
-      }
-
-      // Compute deterministic order id per spec
-      const orderId = generateOrderId({
-        universalAddress: rec.universalAddress,
-        ownerAddress: rec.ownerAddress,
-        recipientAddress: rec.recipientAddress,
-        destinationTokenAddress: usdcDst,
-        destinationChainId: rec.destinationChainId,
-        nonce,
-      });
-
-      // Create (idempotent) order and enqueue for deployment
-      await ensureOrder({
-        id: orderId,
-        universalAddress: rec.universalAddress,
-        sourceChainId: rec.sourceChainId,
-        destinationChainId: rec.destinationChainId,
-        recipientAddress: rec.recipientAddress,
-        sourceTokenAddress: usdcSrc,
-        destinationTokenAddress: usdcDst,
-        ownerAddress: rec.ownerAddress,
-        nonce: Number(nonce),
-        amount: balance,
-        message: "Created from BalanceWatcher",
-      });
-
-      ordersCreated.inc();
-      await enqueueDeploy(orderId);
-
-      // Persist last processed nonce (do not delete cache; TTL will clear after 24h unless re-registered)
-      await updateUDAState(rec.universalAddress, { lastProcessedNonce: nonce });
-
-      logger.info(
-        {
-          uda: rec.universalAddress,
-          orderId,
-          nonce: nonce.toString(),
-          amount: balance.toString(),
-        },
-        "BalanceWatcher: order created and enqueued",
-      );
-    } catch (err) {
-      logger.error(
-        { err, uda: address },
-        "BalanceWatcher: error processing address",
-      );
-    }
-  }
+  // Process all addresses concurrently using Promise.all
+  await Promise.all(addrs.map(processAddress));
 }
 
 export async function startBalanceWatcher(): Promise<void> {
