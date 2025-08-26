@@ -8,6 +8,16 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Client {
+  id        String   @id @default("0000-0000-0000-0000")
+  name      String
+  apiKey    String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  
+  orders    Order[]
+}
+
 model Order {
   id                     String   @id @default(uuid())
   universalAddress       String   @db.VarChar(42)
@@ -24,13 +34,17 @@ model Order {
   bridgeTransactionUrl   String?
   message                String?
   retries                Int      @default(0)
+  clientId               String   @default("0000-0000-0000-0000")
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
+
+  client                 Client   @relation(fields: [clientId], references: [id])
 
   @@unique([universalAddress, sourceChainId, nonce])
   @@index([status])
   @@index([universalAddress])
   @@index([createdAt])
+  @@index([clientId])
 }
 
 enum OrderStatus {
@@ -38,18 +52,6 @@ enum OrderStatus {
   DEPLOYED
   COMPLETED
   FAILED
-}
-
-model CachedAddress {
-  universalAddress    String   @id @db.VarChar(42)
-  ownerAddress        String   @db.VarChar(42)
-  recipientAddress    String   @db.VarChar(42)
-  destinationChainId  Int
-  sourceChainId       Int
-  expiresAt           DateTime
-  createdAt           DateTime @default(now())
-
-  @@index([expiresAt])
 }
 
 model DeadLetterQueue {
