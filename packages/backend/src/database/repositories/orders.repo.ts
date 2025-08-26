@@ -46,6 +46,63 @@ export async function listOrdersByUniversal(
   });
 }
 
+export async function getOrderByIdWithClientFilter(
+  id: string,
+  clientId?: string,
+) {
+  const where: any = { id };
+  if (clientId) {
+    where.clientId = clientId;
+  }
+  return prisma.order.findUnique({ where });
+}
+
+export async function getOrderByParamsWithClientFilter(
+  key: OrderKey,
+  clientId?: string,
+) {
+  const where: any = {
+    universalAddress: key.universalAddress,
+    sourceChainId: key.sourceChainId,
+    nonce: key.nonce,
+  };
+  if (clientId) {
+    where.clientId = clientId;
+  }
+  return prisma.order.findFirst({ where });
+}
+
+export async function listOrdersByUniversalWithClientFilter(
+  universalAddress: string,
+  limit = 20,
+  clientId?: string,
+) {
+  const where: any = { universalAddress };
+  if (clientId) {
+    where.clientId = clientId;
+  }
+  return prisma.order.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+export async function listAllOrdersWithClientFilter(
+  limit = 20,
+  clientId?: string,
+) {
+  const where: any = {};
+  if (clientId) {
+    where.clientId = clientId;
+  }
+  return prisma.order.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
 /**
  * Create an order record. Amount is stored as Prisma Decimal (NUMERIC(78,0)).
  * Throws on unique constraint conflict.

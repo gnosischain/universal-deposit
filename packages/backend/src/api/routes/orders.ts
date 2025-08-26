@@ -1,11 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import {
-  getOrderById,
-  getOrderByParams,
-  listOrdersByUniversal,
+  getOrderByIdWithClientFilter,
+  getOrderByParamsWithClientFilter,
+  listOrdersByUniversalWithClientFilter,
+  listAllOrdersWithClientFilter,
 } from "../../database/repositories/orders.repo";
 import { generateOrderId } from "../../utils/id";
+import {
+  authenticateApiKey,
+  type AuthenticatedRequest,
+} from "../../middleware/auth";
 
 const evmAddress = z
   .string()
@@ -44,8 +49,11 @@ const GenerateIdBody = z.object({
 export async function registerOrdersRoutes(
   app: FastifyInstance,
 ): Promise<void> {
+  // Apply authentication to all routes
+  app.addHook("preHandler", authenticateApiKey);
+
   // GET /api/v1/orders/:id
-  app.get("/api/v1/orders/:id", async (req, reply) => {
+  app.get("/api/v1/orders/:id", async (req: AuthenticatedRequest, reply) => {
     const parsed = GetOrderByIdParams.safeParse((req as any).params);
     if (!parsed.success) {
       await reply
@@ -53,7 +61,11 @@ export async function registerOrdersRoutes(
         .send({ error: "Invalid params", details: parsed.error.flatten() });
       return;
     }
-    const order = await getOrderById(parsed.data.id);
+
+    // Master key can see all orders, regular clients only see their own
+    const clientId = req.client!.isMaster ? undefined : req.client!.id;
+    const order = await getOrderByIdWithClientFilter(parsed.data.id, clientId);
+
     if (!order) {
       await reply.code(404).send({ error: "Order not found" });
       return;
@@ -62,7 +74,7 @@ export async function registerOrdersRoutes(
   });
 
   // GET /api/v1/orders
-  app.get("/api/v1/orders", async (req, reply) => {
+  app.get("/api/v1/orders", async (req: AuthenticatedRequest, reply) => {
     const parsed = GetOrderQuery.safeParse((req as any).query);
     if (!parsed.success) {
       await reply
@@ -72,13 +84,19 @@ export async function registerOrdersRoutes(
     }
     const q = parsed.data;
 
+    // Master key can see all orders, regular clients only see their own
+    const clientId = req.client!.isMaster ? undefined : req.client!.id;
+
     // Single lookup path
     if (q.universalAddress && q.sourceChainId && typeof q.nonce === "number") {
-      const order = await getOrderByParams({
-        universalAddress: q.universalAddress,
-        sourceChainId: q.sourceChainId,
-        nonce: q.nonce,
-      });
+      const order = await getOrderByParamsWithClientFilter(
+        {
+          universalAddress: q.universalAddress,
+          sourceChainId: q.sourceChainId,
+          nonce: q.nonce,
+        },
+        clientId,
+      );
       if (!order) {
         await reply.code(404).send({ error: "Order not found" });
         return;
@@ -89,16 +107,18 @@ export async function registerOrdersRoutes(
 
     // List path (recent orders for UDA)
     if (q.universalAddress) {
-      const orders = await listOrdersByUniversal(
+      const orders = await listOrdersByUniversalWithClientFilter(
         q.universalAddress,
         q.limit ?? 20,
+        clientId,
       );
       await reply.send(orders);
       return;
     }
 
-    // Should be unreachable due to refine, but keep fallback
-    await reply.code(400).send({ error: "Invalid query parameters" });
+    // List all orders (master key only gets all, regular clients get filtered)
+    const orders = await listAllOrdersWithClientFilter(q.limit ?? 20, clientId);
+    await reply.send(orders);
   });
 
   // POST /api/v1/orders/generate-id
