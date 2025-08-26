@@ -3,6 +3,7 @@ import {
   getPublicClient,
   getUsdcAddress as getUsdcFromRegistry,
   getProxyFactoryAddressFromRegistry,
+  getStargateUsdcAddress as getStargateUsdcFromRegistry,
 } from "../config/chains";
 
 /**
@@ -35,4 +36,12 @@ export function getDestinationUsdcAddress(
   chainId: number,
 ): Address | undefined {
   return getUsdcFromRegistry(chainId) as Address | undefined;
+}
+
+/**
+ * Return configured Stargate USDC token address for a given chain id.
+ * Used for fee quoting with Stargate protocol.
+ */
+export function getStargateUsdcAddress(chainId: number): Address | undefined {
+  return getStargateUsdcFromRegistry(chainId) as Address | undefined;
 }

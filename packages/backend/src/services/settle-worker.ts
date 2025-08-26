@@ -8,7 +8,11 @@ import {
   getOrderById,
   updateOrderStatus,
 } from "../database/repositories/orders.repo";
-import { publicClientFor, getSourceUsdcAddress } from "../blockchain/utils";
+import {
+  publicClientFor,
+  getSourceUsdcAddress,
+  getStargateUsdcAddress,
+} from "../blockchain/utils";
 import ERC20Abi from "../blockchain/contracts/ERC20.abi.json";
 import UDAAbi from "../blockchain/contracts/UniversalDepositAccount.abi.json" with { type: "json" };
 import { startHeartbeat } from "../monitoring/heartbeat";
@@ -97,21 +101,40 @@ export async function startSettleWorker(): Promise<void> {
                 throw new Error("No settlement wallet configured");
               }
 
-              // Quote fee from UDA
-              const fee = (await client.readContract({
+              // Get Stargate USDC address for fee quoting
+              const stargateUsdcSrc = getStargateUsdcAddress(
+                order.sourceChainId,
+              );
+              if (!stargateUsdcSrc) {
+                throw new Error("Stargate USDC source address not configured");
+              }
+
+              // Quote fee from UDA using Stargate USDC and slippage
+              const feeQuote = (await client.readContract({
                 address: order.universalAddress as Address,
                 abi: UDAAbi as any,
                 functionName: "quoteStargateFee",
-                args: [usdcSrc as Address, BigInt(order.amount.toString())],
-              })) as bigint;
+                args: [
+                  BigInt(order.amount.toString()),
+                  stargateUsdcSrc as Address,
+                  BigInt(config.SLIPPAGE_PERCENTAGE), // 0.5% = 500 basis points
+                ],
+              })) as [bigint, any, any];
 
-              // Simulate and send settle(sourceToken) with value = fee
+              logger.info(
+                { orderId: order.id, fee: feeQuote[0].toString() },
+                "SettleWorker: obtained fee quote",
+              );
+
+              const fee = feeQuote[0]; // valueToSend
+
+              // Simulate and send settle(sourceToken, maxSlippage) with value = fee
               const sim = await client.simulateContract({
                 account: wallet.account,
                 address: order.universalAddress as Address,
                 abi: UDAAbi as any,
                 functionName: "settle",
-                args: [usdcSrc as Address],
+                args: [usdcSrc as Address, BigInt(config.SLIPPAGE_PERCENTAGE)],
                 value: fee,
               });
 

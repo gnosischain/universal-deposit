@@ -188,6 +188,14 @@ export function getUsdcAddress(chainId: number): `0x${string}` | undefined {
   return getChainById(chainId).contracts.usdc as `0x${string}` | undefined;
 }
 
+export function getStargateUsdcAddress(
+  chainId: number,
+): `0x${string}` | undefined {
+  return getChainById(chainId).contracts.stargateUsdc as
+    | `0x${string}`
+    | undefined;
+}
+
 export function getProxyFactoryAddressFromRegistry(
   chainId: number,
 ): `0x${string}` | undefined {

@@ -10,6 +10,7 @@ import { registerHealthRoute } from "../monitoring/health";
 import { registerMetricsRoute } from "../monitoring/metrics";
 import { registerAddressesRoutes } from "./routes/addresses";
 import { registerOrdersRoutes } from "./routes/orders";
+import { registerAdminRoutes } from "./routes/admin";
 import { startHeartbeat } from "../monitoring/heartbeat";
 
 /**
@@ -25,9 +26,8 @@ export async function createServer() {
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: true });
 
-  // Simple API key auth preHandler (can be replaced later with more robust auth)
-  app.addHook("preHandler", async (req, reply) => {
-    // Allow health and docs without API key
+  // Allow public access to health, docs, and metrics endpoints
+  app.addHook("preHandler", async (req, _reply) => {
     const openPaths = [
       "/api/v1/health",
       "/api-docs",
@@ -35,11 +35,7 @@ export async function createServer() {
       "/metrics",
     ];
     if (openPaths.some((p) => req.url.startsWith(p))) return;
-
-    const apiKey = req.headers["x-api-key"];
-    if (!apiKey || apiKey !== config.API_SECRET_KEY) {
-      await reply.code(401).send({ error: "Unauthorized" });
-    }
+    // Other routes will be handled by individual route authentication
   });
 
   // Rate limit (generic, we will also implement ownerAddress/day limiter inside route later)
@@ -77,6 +73,7 @@ export async function createServer() {
   await registerMetricsRoute(app);
   await registerAddressesRoutes(app);
   await registerOrdersRoutes(app);
+  await registerAdminRoutes(app);
 
   return app;
 }
@@ -87,8 +84,8 @@ export async function createServer() {
 export async function startAPIServer() {
   const app = await createServer();
 
-  // Start API heartbeat (every 30s by default)
-  startHeartbeat("api", 30000);
+  // Start API heartbeat
+  startHeartbeat("api", config.HEARTBEAT_INTERVAL_MS);
 
   await app.listen({ port: config.API_PORT, host: "0.0.0.0" });
   logger.info({ port: config.API_PORT }, "API server listening");
