@@ -3,7 +3,6 @@ import { z } from "zod";
 import { prisma } from "../../database/client";
 import { logger } from "../../utils/logger";
 import {
-  authenticateApiKey,
   requireMasterKey,
   type AuthenticatedRequest,
 } from "../../middleware/auth";
@@ -34,13 +33,10 @@ function generateApiKey(): string {
 }
 
 export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
-  // Apply authentication to all admin routes
-  app.addHook("preHandler", authenticateApiKey);
-  app.addHook("preHandler", requireMasterKey);
-
   // POST /api/v1/admin/clients - Create new client
   app.post(
     "/api/v1/admin/clients",
+    { preHandler: requireMasterKey },
     async (req: AuthenticatedRequest, reply) => {
       const parsed = CreateClientBody.safeParse(req.body);
       if (!parsed.success) {
@@ -85,39 +81,44 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   );
 
   // GET /api/v1/admin/clients - List all clients
-  app.get("/api/v1/admin/clients", async (req: AuthenticatedRequest, reply) => {
-    try {
-      const clients = await prisma.client.findMany({
-        select: {
-          id: true,
-          name: true,
-          apiKey: true,
-          isActive: true,
-          createdAt: true,
-          _count: {
-            select: {
-              orders: true,
+  app.get(
+    "/api/v1/admin/clients",
+    { preHandler: requireMasterKey },
+    async (req: AuthenticatedRequest, reply) => {
+      try {
+        const clients = await prisma.client.findMany({
+          select: {
+            id: true,
+            name: true,
+            apiKey: true,
+            isActive: true,
+            createdAt: true,
+            _count: {
+              select: {
+                orders: true,
+              },
             },
           },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
 
-      await reply.send({ clients });
-    } catch (error) {
-      logger.error({ error }, "Admin: Failed to list clients");
-      await reply.code(500).send({
-        error: "Failed to list clients",
-        message: "Database error occurred",
-      });
-    }
-  });
+        await reply.send({ clients });
+      } catch (error) {
+        logger.error({ error }, "Admin: Failed to list clients");
+        await reply.code(500).send({
+          error: "Failed to list clients",
+          message: "Database error occurred",
+        });
+      }
+    },
+  );
 
   // GET /api/v1/admin/clients/:id - Get specific client
   app.get(
     "/api/v1/admin/clients/:id",
+    { preHandler: requireMasterKey },
     async (req: AuthenticatedRequest, reply) => {
       const parsed = ClientIdParam.safeParse(req.params);
       if (!parsed.success) {
@@ -169,6 +170,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // PUT /api/v1/admin/clients/:id - Update client
   app.put(
     "/api/v1/admin/clients/:id",
+    { preHandler: requireMasterKey },
     async (req: AuthenticatedRequest, reply) => {
       const paramsParsed = ClientIdParam.safeParse(req.params);
       const bodyParsed = UpdateClientBody.safeParse(req.body);
@@ -237,6 +239,7 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/v1/admin/clients/:id/regenerate-key - Regenerate API key
   app.post(
     "/api/v1/admin/clients/:id/regenerate-key",
+    { preHandler: requireMasterKey },
     async (req: AuthenticatedRequest, reply) => {
       const parsed = ClientIdParam.safeParse(req.params);
       if (!parsed.success) {

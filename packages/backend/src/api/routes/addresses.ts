@@ -5,10 +5,7 @@ import { config } from "../../config/env";
 import { ownerDailyKey, incrWithTtl } from "../../cache/redis";
 import { registerOrRefreshUDA } from "../../cache/uda";
 import { pickSourceNetwork } from "../../blockchain/clients";
-import {
-  authenticateApiKey,
-  type AuthenticatedRequest,
-} from "../../middleware/auth";
+import { type AuthenticatedRequest } from "../../middleware/auth";
 import ProxyFactoryAbi from "../../blockchain/contracts/ProxyFactory.abi.json" with { type: "json" };
 
 const RegisterAddressBody = z.object({
@@ -59,9 +56,6 @@ async function computeUniversalAddress(
 export async function registerAddressesRoutes(
   app: FastifyInstance,
 ): Promise<void> {
-  // Apply authentication to all routes
-  app.addHook("preHandler", authenticateApiKey);
-
   // POST /api/v1/register-address
   app.post(
     "/api/v1/register-address",

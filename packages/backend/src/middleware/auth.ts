@@ -18,10 +18,10 @@ export interface AuthenticatedRequest extends FastifyRequest {
  * Master key gets special privileges (isMaster: true)
  */
 export async function authenticateApiKey(
-  request: AuthenticatedRequest,
+  req: FastifyRequest,
   reply: FastifyReply,
 ): Promise<void> {
-  const apiKey = request.headers["x-api-key"] as string;
+  const apiKey = req.headers["x-api-key"] as string;
 
   if (!apiKey) {
     await reply.code(401).send({
@@ -33,7 +33,7 @@ export async function authenticateApiKey(
 
   // Check if it's the master key
   if (apiKey === config.DEVELOPER_MASTER_KEY) {
-    request.client = {
+    (req as AuthenticatedRequest).client = {
       id: "0000-0000-0000-0000",
       name: "Master Developer",
       isActive: true,
@@ -69,7 +69,7 @@ export async function authenticateApiKey(
       return;
     }
 
-    request.client = {
+    (req as AuthenticatedRequest).client = {
       ...client,
       isMaster: false,
     };

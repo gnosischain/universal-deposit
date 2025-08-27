@@ -12,6 +12,7 @@ import { registerAddressesRoutes } from "./routes/addresses";
 import { registerOrdersRoutes } from "./routes/orders";
 import { registerAdminRoutes } from "./routes/admin";
 import { startHeartbeat } from "../monitoring/heartbeat";
+import { authenticateApiKey } from "../middleware/auth";
 
 /**
  * Create and configure Fastify instance
@@ -26,16 +27,20 @@ export async function createServer() {
   await app.register(helmet, { contentSecurityPolicy: false });
   await app.register(cors, { origin: true });
 
-  // Allow public access to health, docs, and metrics endpoints
-  app.addHook("preHandler", async (req, _reply) => {
+  // Global authentication with open endpoints whitelist
+  app.addHook("preHandler", async (req, reply) => {
     const openPaths = [
       "/api/v1/health",
       "/api-docs",
       "/api-docs/json",
       "/metrics",
     ];
-    if (openPaths.some((p) => req.url.startsWith(p))) return;
-    // Other routes will be handled by individual route authentication
+    if (openPaths.some((path) => req.url.startsWith(path))) {
+      return; // Skip auth for open endpoints
+    }
+
+    // Apply basic API key authentication for all other routes
+    await authenticateApiKey(req, reply);
   });
 
   // Rate limit (generic, we will also implement ownerAddress/day limiter inside route later)

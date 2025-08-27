@@ -7,10 +7,7 @@ import {
   listAllOrdersWithClientFilter,
 } from "../../database/repositories/orders.repo";
 import { generateOrderId } from "../../utils/id";
-import {
-  authenticateApiKey,
-  type AuthenticatedRequest,
-} from "../../middleware/auth";
+import { type AuthenticatedRequest } from "../../middleware/auth";
 
 const evmAddress = z
   .string()
@@ -49,9 +46,6 @@ const GenerateIdBody = z.object({
 export async function registerOrdersRoutes(
   app: FastifyInstance,
 ): Promise<void> {
-  // Apply authentication to all routes
-  app.addHook("preHandler", authenticateApiKey);
-
   // GET /api/v1/orders/:id
   app.get("/api/v1/orders/:id", async (req: AuthenticatedRequest, reply) => {
     const parsed = GetOrderByIdParams.safeParse((req as any).params);
