@@ -16,7 +16,7 @@ COPY pnpm-lock.yaml* ./
 COPY tsconfig.json ./
 
 # Install pnpm and dependencies (including devDependencies for tsx)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Expose the API port
 EXPOSE 3000

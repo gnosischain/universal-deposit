@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { Channel, ConsumeMessage } from "amqplib";
 import { logger } from "../utils/logger";
+import { parseMessagePayload } from "../utils/message-parser";
 import { createChannel } from "../queues/connection";
 import { QUEUES } from "../queues/topology";
 import { enqueueSettle, enqueueDeployRetry } from "../queues/publishers";
@@ -38,10 +39,27 @@ export async function startDeployWorker(): Promise<void> {
         void (async () => {
           if (!msg) return;
           try {
-            const payload = JSON.parse(msg.content.toString()) as {
+            // Parse message payload using utility function
+            const payload = parseMessagePayload<{
               orderId: string;
               attempt?: number;
-            };
+            }>(msg.content);
+            if (!payload) {
+              logger.error(
+                "DeployWorker: failed to parse message payload, ack",
+              );
+              ch.ack(msg);
+              return;
+            }
+
+            if (!payload.orderId) {
+              logger.error(
+                { payload },
+                "DeployWorker: missing orderId in payload, ack",
+              );
+              ch.ack(msg);
+              return;
+            }
 
             const order = await getOrderById(payload.orderId);
             if (!order) {

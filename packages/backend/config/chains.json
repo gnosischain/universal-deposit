@@ -17,7 +17,7 @@
         "stargateUsdc": "0x28BEc7E30E6faee657a03e19Bf1128AaD7632A00"
       },
       "layerZero": {
-        "endpointId": 0,
+        "endpointId": 40245,
         "scanBaseUrl": "https://layerzeroscan.com/tx"
       },
       "policies": {

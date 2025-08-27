@@ -85,13 +85,30 @@ async function processAddress(address: string): Promise<void> {
       return;
     }
 
-    // Read on-chain UDA nonce
-    const nonce = (await client.readContract({
-      address: rec.universalAddress as Address,
-      abi: UDAAbi as any,
-      functionName: "nonce",
-      args: [],
-    })) as bigint;
+    // Read on-chain UDA nonce (handle undeployed contract)
+    let nonce: bigint;
+    try {
+      nonce = (await client.readContract({
+        address: rec.universalAddress as Address,
+        abi: UDAAbi as any,
+        functionName: "nonce",
+        args: [],
+      })) as bigint;
+    } catch (err) {
+      // Handle case where contract is not deployed yet
+      if (
+        err instanceof Error &&
+        err.message.includes('returned no data ("0x")')
+      ) {
+        logger.debug(
+          { uda: rec.universalAddress },
+          "BalanceWatcher: contract not deployed yet, using nonce 0",
+        );
+        nonce = 0n; // Start with nonce 0 for undeployed contracts
+      } else {
+        throw err; // Re-throw other errors
+      }
+    }
 
     // Idempotency guard: skip if this nonce was already processed
     if (rec.lastProcessedNonce === nonce) {

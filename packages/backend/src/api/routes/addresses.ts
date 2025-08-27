@@ -1,5 +1,4 @@
 import type { FastifyInstance } from "fastify";
-import { z } from "zod";
 import type { Address } from "viem";
 import { config } from "../../config/env";
 import { ownerDailyKey, incrWithTtl } from "../../cache/redis";
@@ -7,24 +6,11 @@ import { registerOrRefreshUDA } from "../../cache/uda";
 import { pickSourceNetwork } from "../../blockchain/clients";
 import { type AuthenticatedRequest } from "../../middleware/auth";
 import ProxyFactoryAbi from "../../blockchain/contracts/ProxyFactory.abi.json" with { type: "json" };
-
-const RegisterAddressBody = z.object({
-  ownerAddress: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid owner address"),
-  recipientAddress: z
-    .string()
-    .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid recipient address"),
-  destinationChainId: z.number().int().positive(),
-  sourceChainId: z.number().int().positive(),
-});
-
-const GetAddressQuery = RegisterAddressBody.omit({}).partial({}).extend({
-  ownerAddress: RegisterAddressBody.shape.ownerAddress,
-  recipientAddress: RegisterAddressBody.shape.recipientAddress,
-  destinationChainId: RegisterAddressBody.shape.destinationChainId,
-  sourceChainId: RegisterAddressBody.shape.sourceChainId,
-});
+import {
+  RegisterAddressBody,
+  GetAddressQuery,
+  addressesSchemas,
+} from "../schemas/addresses";
 
 async function computeUniversalAddress(
   ownerAddress: Address,
@@ -32,9 +18,7 @@ async function computeUniversalAddress(
   destinationChainId: bigint,
   sourceChainId: number,
 ): Promise<{ universalAddress: Address; sourceChainId: number }> {
-  const { publicClient, proxyFactory } = pickSourceNetwork(
-    sourceChainId.toString(),
-  );
+  const { publicClient, proxyFactory } = pickSourceNetwork(sourceChainId);
 
   if (!proxyFactory) {
     throw new Error(
@@ -59,6 +43,7 @@ export async function registerAddressesRoutes(
   // POST /api/v1/register-address
   app.post(
     "/api/v1/register-address",
+    { schema: addressesSchemas.registerAddress },
     async (req: AuthenticatedRequest, reply) => {
       const parsed = RegisterAddressBody.safeParse(req.body);
       if (!parsed.success) {
@@ -107,43 +92,51 @@ export async function registerAddressesRoutes(
   );
 
   // GET /api/v1/address
-  app.get("/api/v1/address", async (req: AuthenticatedRequest, reply) => {
-    const parsed = GetAddressQuery.safeParse(req.query);
-    if (!parsed.success) {
-      await reply
-        .code(400)
-        .send({ error: "Invalid query", details: parsed.error.flatten() });
-      return;
-    }
-    const {
-      ownerAddress,
-      recipientAddress,
-      destinationChainId,
-      sourceChainId,
-    } = parsed.data;
+  app.get(
+    "/api/v1/address",
+    { schema: addressesSchemas.getAddress },
+    async (req: AuthenticatedRequest, reply) => {
+      const parsed = GetAddressQuery.safeParse(req.query);
+      if (!parsed.success) {
+        await reply
+          .code(400)
+          .send({ error: "Invalid query", details: parsed.error.flatten() });
+        return;
+      }
+      const {
+        ownerAddress,
+        recipientAddress,
+        destinationChainId,
+        sourceChainId,
+      } = parsed.data;
 
-    const { universalAddress } = await computeUniversalAddress(
-      ownerAddress as Address,
-      recipientAddress as Address,
-      BigInt(destinationChainId),
-      sourceChainId,
-    );
+      const { universalAddress } = await computeUniversalAddress(
+        ownerAddress as Address,
+        recipientAddress as Address,
+        BigInt(destinationChainId),
+        sourceChainId,
+      );
 
-    await reply.send({ universalAddress });
-  });
+      await reply.send({ universalAddress });
+    },
+  );
 
   // GET /api/v1/me
-  app.get("/api/v1/me", async (req: AuthenticatedRequest, reply) => {
-    if (!req.client) {
-      await reply.code(401).send({ error: "Not authenticated" });
-      return;
-    }
+  app.get(
+    "/api/v1/me",
+    { schema: addressesSchemas.getMe },
+    async (req: AuthenticatedRequest, reply) => {
+      if (!req.client) {
+        await reply.code(401).send({ error: "Not authenticated" });
+        return;
+      }
 
-    await reply.send({
-      id: req.client.id,
-      name: req.client.name,
-      isActive: req.client.isActive,
-      isMaster: req.client.isMaster,
-    });
-  });
+      await reply.send({
+        id: req.client.id,
+        name: req.client.name,
+        isActive: req.client.isActive,
+        isMaster: req.client.isMaster,
+      });
+    },
+  );
 }

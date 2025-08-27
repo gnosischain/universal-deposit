@@ -3,9 +3,8 @@ import {
   getPublicClient,
   chainForId as chainForIdFromRegistry,
   walletClientFor as walletFromRegistry,
-  getChainByKey,
-  pickPreferredSourceKey,
   getProxyFactoryAddressFromRegistry,
+  getChainById,
 } from "../config/chains";
 
 /**
@@ -21,22 +20,15 @@ export function walletClientFor(chainId: number, kind: "deployer" | "settler") {
   return walletFromRegistry(chainId, kind);
 }
 
-export type SourceNetworkKey = string;
-
-/**
- * Select a source network by key (registry 'key'). If not provided, pick a preferred source.
- * Returns viem Chain, a public client, the proxyFactory address (if configured), and the sourceChainId.
- */
-export function pickSourceNetwork(preferred?: SourceNetworkKey): {
+export function pickSourceNetwork(sourceChainId: number): {
   chain: Chain;
   publicClient: ReturnType<typeof getPublicClient>;
   proxyFactory: Address | undefined;
   sourceChainId: number;
 } {
-  const key = preferred ?? pickPreferredSourceKey();
-  const entry = getChainByKey(key);
+  const entry = getChainById(sourceChainId);
   const chain = chainForIdFromRegistry(entry.chainId);
-  const publicClient = getPublicClient(key);
+  const publicClient = getPublicClient(sourceChainId);
   const proxyFactory = getProxyFactoryAddressFromRegistry(entry.chainId) as
     | Address
     | undefined;

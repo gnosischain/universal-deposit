@@ -1,6 +1,7 @@
 import type { Address, Hex } from "viem";
 import type { Channel, ConsumeMessage } from "amqplib";
 import { logger } from "../utils/logger";
+import { parseMessagePayload } from "../utils/message-parser";
 import { createChannel } from "../queues/connection";
 import { QUEUES } from "../queues/topology";
 import { enqueueSettleRetry, enqueueResidualDelay } from "../queues/publishers";
@@ -44,10 +45,18 @@ export async function startSettleWorker(): Promise<void> {
         void (async () => {
           if (!msg) return;
           try {
-            const payload = JSON.parse(msg.content.toString()) as {
+            // Parse message payload using utility function
+            const payload = parseMessagePayload<{
               orderId: string;
               attempt?: number;
-            };
+            }>(msg.content);
+            if (!payload) {
+              logger.error(
+                "SettleWorker: failed to parse message payload, ack",
+              );
+              ch.ack(msg);
+              return;
+            }
 
             const order = await getOrderById(payload.orderId);
             if (!order) {
@@ -181,10 +190,17 @@ export async function startSettleWorker(): Promise<void> {
           } catch (err) {
             // Retry with TTL tiers
             try {
-              const payload = JSON.parse(msg.content.toString()) as {
+              const payload = parseMessagePayload<{
                 orderId: string;
                 attempt?: number;
-              };
+              }>(msg.content);
+              if (!payload) {
+                logger.error(
+                  "SettleWorker: failed to parse message payload in error handler, ack",
+                );
+                ch.ack(msg);
+                return;
+              }
               const attempt = (payload.attempt ?? 0) + 1;
               const maxAttempts = 5;
               if (attempt <= maxAttempts) {
