@@ -68,28 +68,6 @@ const EnvSchema = z.object({
   // Residual reprocessing schedule
   RESIDUAL_DELAY_SCHEDULE: ResidualScheduleSchema,
 
-  // Chains & RPC
-  EDU_CHAIN_RPC_URL: z.string().url().optional(),
-  GNOSIS_CHAIN_RPC_URL: z.string().url().optional(),
-  CHIDAO_CHAIN_RPC_URL: z.string().url().optional(),
-  EDU_CHAIN_ID: optionalNumberFromString.default("41923"),
-  GNOSIS_CHAIN_ID: optionalNumberFromString.default("100"),
-  CHIDAO_CHAIN_ID: optionalNumberFromString.optional(),
-
-  // Contracts
-  PROXY_FACTORY_ADDRESS_EDU: hexAddress,
-  UD_MANAGER_ADDRESS_EDU: hexAddress,
-  USDC_ADDRESS_EDU: hexAddress,
-  STARGATE_TOKEN_ADDRESS_EDU: hexAddress,
-
-  PROXY_FACTORY_ADDRESS_CHIDAO: hexAddress,
-  UD_MANAGER_ADDRESS_CHIDAO: hexAddress,
-  USDC_ADDRESS_CHIDAO: hexAddress,
-  STARGATE_TOKEN_ADDRESS_CHIDAO: hexAddress,
-
-  PROXY_FACTORY_ADDRESS_GNOSIS: hexAddress,
-  USDC_ADDRESS_GNOSIS: hexAddress,
-
   // Keys
   DEPLOYMENT_PRIVATE_KEY: z
     .string()
