@@ -18,6 +18,7 @@ import ERC20Abi from "../blockchain/contracts/ERC20.abi.json" with { type: "json
 import UDAAbi from "../blockchain/contracts/UniversalDepositAccount.abi.json" with { type: "json" };
 import { generateOrderId } from "../utils/id";
 import { startHeartbeat } from "../monitoring/heartbeat";
+import { getBridgeLimits } from "../utils/route-validation";
 
 /**
  * BalanceWatcher
@@ -73,12 +74,15 @@ async function processAddress(address: string): Promise<void> {
       lastDetectedBalance: balance,
     });
 
-    if (balance < BigInt(config.MIN_BRIDGE_AMOUNT)) {
+    // Get bridge limits from chain config
+    const bridgeLimits = getBridgeLimits(rec.sourceChainId);
+    if (balance < bridgeLimits.minAmount) {
       logger.debug(
         {
           uda: rec.universalAddress,
           balance: balance.toString(),
-          min: config.MIN_BRIDGE_AMOUNT,
+          min: bridgeLimits.minAmount.toString(),
+          sourceChainId: rec.sourceChainId,
         },
         "BalanceWatcher: balance below threshold",
       );
@@ -187,7 +191,6 @@ export async function startBalanceWatcher(): Promise<void> {
   logger.info(
     {
       intervalMs: config.BALANCE_CHECK_INTERVAL_MS,
-      minAmount: config.MIN_BRIDGE_AMOUNT,
     },
     "BalanceWatcher starting",
   );

@@ -64,6 +64,7 @@ export async function createServer() {
       components: {
         securitySchemes: {
           ApiKeyAuth: { type: "apiKey", in: "header", name: "X-API-Key" },
+          MasterKeyAuth: { type: "apiKey", in: "header", name: "X-Master-Key" },
         },
       },
     },

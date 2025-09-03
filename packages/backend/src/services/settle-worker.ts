@@ -100,6 +100,10 @@ export async function startSettleWorker(): Promise<void> {
                 { orderId: order.id },
                 "SettleWorker: zero balance, nothing to settle, ack",
               );
+
+              await updateOrderStatus(order.id, "COMPLETED" as any, {
+                message: "Zero balance at settlement time",
+              });
               ch.ack(msg);
               return;
             }

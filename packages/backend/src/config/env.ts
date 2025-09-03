@@ -16,11 +16,6 @@ const optionalNumberFromString = z
     message: "Expected number",
   });
 
-const hexAddress = z
-  .string()
-  .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM address")
-  .optional();
-
 const ResidualScheduleSchema = z
   .string()
   .default("300000,600000,1800000,3600000,10800000") // 5m,10m,30min,1h,3h
@@ -82,8 +77,6 @@ const EnvSchema = z.object({
   VERIFY_DEST_CHAIN: bool.default(false),
 
   // Business rules
-  MIN_BRIDGE_AMOUNT: optionalNumberFromString.default("1000000"), // 1 USDC (6 decimals)
-  MAX_BRIDGE_AMOUNT: optionalNumberFromString.default("10000000000"), // 10k USDC
   BALANCE_CHECK_INTERVAL_MS: optionalNumberFromString.default("30000"),
 
   // Service configuration

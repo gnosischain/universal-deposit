@@ -1,5 +1,4 @@
-import type { FastifyInstance } from "fastify";
-import { z } from "zod";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import { prisma } from "../../database/client";
 import { logger } from "../../utils/logger";
 import {
@@ -7,23 +6,12 @@ import {
   type AuthenticatedRequest,
 } from "../../middleware/auth";
 import { randomBytes } from "crypto";
-
-const CreateClientBody = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name too long"),
-});
-
-const UpdateClientBody = z.object({
-  name: z
-    .string()
-    .min(1, "Name is required")
-    .max(100, "Name too long")
-    .optional(),
-  isActive: z.boolean().optional(),
-});
-
-const ClientIdParam = z.object({
-  id: z.string().uuid("Invalid client ID format"),
-});
+import {
+  adminSchemas,
+  CreateClientBodySchema,
+  UpdateClientBodySchema,
+  ClientIdParamSchema,
+} from "../schemas/admin";
 
 /**
  * Generate a secure API key
@@ -36,9 +24,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/v1/admin/clients - Create new client
   app.post(
     "/api/v1/admin/clients",
-    { preHandler: requireMasterKey },
-    async (req: AuthenticatedRequest, reply) => {
-      const parsed = CreateClientBody.safeParse(req.body);
+    {
+      schema: adminSchemas.createClient,
+      preHandler: requireMasterKey,
+    },
+    async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      const parsed = CreateClientBodySchema.safeParse((req as any).body);
       if (!parsed.success) {
         await reply
           .code(400)
@@ -83,8 +74,11 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/v1/admin/clients - List all clients
   app.get(
     "/api/v1/admin/clients",
-    { preHandler: requireMasterKey },
-    async (req: AuthenticatedRequest, reply) => {
+    {
+      schema: adminSchemas.listClients,
+      preHandler: requireMasterKey,
+    },
+    async (req: AuthenticatedRequest, reply: FastifyReply) => {
       try {
         const clients = await prisma.client.findMany({
           select: {
@@ -118,9 +112,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // GET /api/v1/admin/clients/:id - Get specific client
   app.get(
     "/api/v1/admin/clients/:id",
-    { preHandler: requireMasterKey },
-    async (req: AuthenticatedRequest, reply) => {
-      const parsed = ClientIdParam.safeParse(req.params);
+    {
+      schema: adminSchemas.getClient,
+      preHandler: requireMasterKey,
+    },
+    async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      const parsed = ClientIdParamSchema.safeParse((req as any).params);
       if (!parsed.success) {
         await reply.code(400).send({
           error: "Invalid client ID",
@@ -170,10 +167,13 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // PUT /api/v1/admin/clients/:id - Update client
   app.put(
     "/api/v1/admin/clients/:id",
-    { preHandler: requireMasterKey },
-    async (req: AuthenticatedRequest, reply) => {
-      const paramsParsed = ClientIdParam.safeParse(req.params);
-      const bodyParsed = UpdateClientBody.safeParse(req.body);
+    {
+      schema: adminSchemas.updateClient,
+      preHandler: requireMasterKey,
+    },
+    async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      const paramsParsed = ClientIdParamSchema.safeParse((req as any).params);
+      const bodyParsed = UpdateClientBodySchema.safeParse((req as any).body);
 
       if (!paramsParsed.success) {
         await reply.code(400).send({
@@ -239,9 +239,12 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
   // POST /api/v1/admin/clients/:id/regenerate-key - Regenerate API key
   app.post(
     "/api/v1/admin/clients/:id/regenerate-key",
-    { preHandler: requireMasterKey },
-    async (req: AuthenticatedRequest, reply) => {
-      const parsed = ClientIdParam.safeParse(req.params);
+    {
+      schema: adminSchemas.regenerateApiKey,
+      preHandler: requireMasterKey,
+    },
+    async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      const parsed = ClientIdParamSchema.safeParse((req as any).params);
       if (!parsed.success) {
         await reply.code(400).send({
           error: "Invalid client ID",

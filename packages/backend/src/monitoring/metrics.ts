@@ -1,4 +1,4 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import {
   Registry,
   collectDefaultMetrics,
@@ -9,7 +9,16 @@ import {
 
 // Central registry
 export const registry = new Registry();
-collectDefaultMetrics({ register: registry, prefix: "ud_" });
+
+// Collect default metrics with error handling to prevent hanging
+try {
+  collectDefaultMetrics({
+    register: registry,
+    prefix: "ud_",
+  });
+} catch (error) {
+  console.warn("Failed to collect default metrics:", error);
+}
 
 // Order metrics
 export const ordersCreated = new Counter({
@@ -59,8 +68,24 @@ export const residualBackoffLevel = new Gauge({
 export async function registerMetricsRoute(
   app: FastifyInstance,
 ): Promise<void> {
-  app.get("/metrics", async (req, reply) => {
-    await reply.header("Content-Type", registry.contentType);
-    return registry.metrics();
+  app.get("/metrics", async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      await reply.header("Content-Type", registry.contentType);
+
+      // Add timeout to prevent hanging
+      const metricsPromise = Promise.resolve(registry.metrics());
+      const timeoutPromise = new Promise<string>((_, reject) => {
+        setTimeout(
+          () => reject(new Error("Metrics collection timeout")),
+          10000,
+        );
+      });
+
+      const metrics = await Promise.race([metricsPromise, timeoutPromise]);
+      return metrics;
+    } catch (error) {
+      console.error("Error collecting metrics:", error);
+      await reply.code(500).send({ error: "Failed to collect metrics" });
+    }
   });
 }
