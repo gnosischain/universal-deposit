@@ -11,6 +11,7 @@ import {
   GetAddressQuery,
   addressesSchemas,
 } from "../schemas/addresses";
+import { validateRoute } from "../../utils/route-validation";
 
 async function computeUniversalAddress(
   ownerAddress: Address,
@@ -58,6 +59,18 @@ export async function registerAddressesRoutes(
         destinationChainId,
         sourceChainId,
       } = parsed.data;
+
+      // Validate route configuration
+      const routeValidation = validateRoute(sourceChainId, destinationChainId);
+      if (!routeValidation.isValid) {
+        await reply.code(400).send({
+          error: "Invalid route",
+          code: routeValidation.error?.code,
+          message: routeValidation.error?.message,
+          details: routeValidation.error?.details,
+        });
+        return;
+      }
 
       // Per-owner daily rate limit
       const todayKey = ownerDailyKey(ownerAddress, new Date().toISOString());
@@ -109,6 +122,18 @@ export async function registerAddressesRoutes(
         destinationChainId,
         sourceChainId,
       } = parsed.data;
+
+      // Validate route configuration
+      const routeValidation = validateRoute(sourceChainId, destinationChainId);
+      if (!routeValidation.isValid) {
+        await reply.code(400).send({
+          error: "Invalid route",
+          code: routeValidation.error?.code,
+          message: routeValidation.error?.message,
+          details: routeValidation.error?.details,
+        });
+        return;
+      }
 
       const { universalAddress } = await computeUniversalAddress(
         ownerAddress as Address,
