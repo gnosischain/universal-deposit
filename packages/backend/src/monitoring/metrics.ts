@@ -6,7 +6,6 @@ import {
   Histogram,
   Gauge,
 } from "prom-client";
-
 // Central registry
 export const registry = new Registry();
 
@@ -70,19 +69,18 @@ export async function registerMetricsRoute(
 ): Promise<void> {
   app.get("/metrics", async (req: FastifyRequest, reply: FastifyReply) => {
     try {
-      await reply.header("Content-Type", registry.contentType);
+      void reply.header("Content-Type", registry.contentType);
 
       // Add timeout to prevent hanging
       const metricsPromise = Promise.resolve(registry.metrics());
+
       const timeoutPromise = new Promise<string>((_, reject) => {
-        setTimeout(
-          () => reject(new Error("Metrics collection timeout")),
-          10000,
-        );
+        setTimeout(() => reject(new Error("Metrics collection timeout")), 1000);
       });
 
       const metrics = await Promise.race([metricsPromise, timeoutPromise]);
-      return metrics;
+
+      await reply.send(metrics);
     } catch (error) {
       console.error("Error collecting metrics:", error);
       await reply.code(500).send({ error: "Failed to collect metrics" });
