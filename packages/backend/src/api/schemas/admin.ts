@@ -23,7 +23,7 @@ export const adminSchemas = {
   createClient: {
     description: "Create a new API client",
     tags: ["Admin"],
-    security: [{ MasterKeyAuth: [] }],
+    security: [{ ApiKeyAuth: [] }],
     body: {
       type: "object",
       required: ["name"],
@@ -97,7 +97,7 @@ export const adminSchemas = {
   listClients: {
     description: "List all API clients",
     tags: ["Admin"],
-    security: [{ MasterKeyAuth: [] }],
+    security: [{ ApiKeyAuth: [] }],
     response: {
       200: {
         description: "List of clients",
@@ -167,7 +167,7 @@ export const adminSchemas = {
   getClient: {
     description: "Get a specific API client by ID",
     tags: ["Admin"],
-    security: [{ MasterKeyAuth: [] }],
+    security: [{ ApiKeyAuth: [] }],
     params: {
       type: "object",
       required: ["id"],
@@ -257,7 +257,7 @@ export const adminSchemas = {
   updateClient: {
     description: "Update an API client",
     tags: ["Admin"],
-    security: [{ MasterKeyAuth: [] }],
+    security: [{ ApiKeyAuth: [] }],
     params: {
       type: "object",
       required: ["id"],
@@ -355,7 +355,7 @@ export const adminSchemas = {
   regenerateApiKey: {
     description: "Regenerate API key for a client",
     tags: ["Admin"],
-    security: [{ MasterKeyAuth: [] }],
+    security: [{ ApiKeyAuth: [] }],
     params: {
       type: "object",
       required: ["id"],

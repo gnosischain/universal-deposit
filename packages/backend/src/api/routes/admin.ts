@@ -1,10 +1,7 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
 import { prisma } from "../../database/client";
 import { logger } from "../../utils/logger";
-import {
-  requireMasterKey,
-  type AuthenticatedRequest,
-} from "../../middleware/auth";
+import { type AuthenticatedRequest } from "../../middleware/auth";
 import { randomBytes } from "crypto";
 import {
   adminSchemas,
@@ -26,9 +23,17 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     "/api/v1/admin/clients",
     {
       schema: adminSchemas.createClient,
-      preHandler: requireMasterKey,
     },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      // Check if user has master key access
+      if (!req.client?.isMaster) {
+        await reply.code(403).send({
+          error: "Forbidden",
+          message: "Master key required for this operation",
+        });
+        return;
+      }
+
       const parsed = CreateClientBodySchema.safeParse((req as any).body);
       if (!parsed.success) {
         await reply
@@ -76,9 +81,17 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     "/api/v1/admin/clients",
     {
       schema: adminSchemas.listClients,
-      preHandler: requireMasterKey,
     },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      // Check if user has master key access
+      if (!req.client?.isMaster) {
+        await reply.code(403).send({
+          error: "Forbidden",
+          message: "Master key required for this operation",
+        });
+        return;
+      }
+
       try {
         const clients = await prisma.client.findMany({
           select: {
@@ -114,9 +127,17 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     "/api/v1/admin/clients/:id",
     {
       schema: adminSchemas.getClient,
-      preHandler: requireMasterKey,
     },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      // Check if user has master key access
+      if (!req.client?.isMaster) {
+        await reply.code(403).send({
+          error: "Forbidden",
+          message: "Master key required for this operation",
+        });
+        return;
+      }
+
       const parsed = ClientIdParamSchema.safeParse((req as any).params);
       if (!parsed.success) {
         await reply.code(400).send({
@@ -169,9 +190,17 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     "/api/v1/admin/clients/:id",
     {
       schema: adminSchemas.updateClient,
-      preHandler: requireMasterKey,
     },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      // Check if user has master key access
+      if (!req.client?.isMaster) {
+        await reply.code(403).send({
+          error: "Forbidden",
+          message: "Master key required for this operation",
+        });
+        return;
+      }
+
       const paramsParsed = ClientIdParamSchema.safeParse((req as any).params);
       const bodyParsed = UpdateClientBodySchema.safeParse((req as any).body);
 
@@ -241,9 +270,17 @@ export async function registerAdminRoutes(app: FastifyInstance): Promise<void> {
     "/api/v1/admin/clients/:id/regenerate-key",
     {
       schema: adminSchemas.regenerateApiKey,
-      preHandler: requireMasterKey,
     },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
+      // Check if user has master key access
+      if (!req.client?.isMaster) {
+        await reply.code(403).send({
+          error: "Forbidden",
+          message: "Master key required for this operation",
+        });
+        return;
+      }
+
       const parsed = ClientIdParamSchema.safeParse((req as any).params);
       if (!parsed.success) {
         await reply.code(400).send({

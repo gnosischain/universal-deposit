@@ -9,7 +9,7 @@ datasource db {
 }
 
 model Client {
-  id        String   @id @default("0000-0000-0000-0000")
+  id        String   @id @default(uuid())
   name      String
   apiKey    String   @unique
   isActive  Boolean  @default(true)

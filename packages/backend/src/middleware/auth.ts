@@ -84,18 +84,3 @@ export async function authenticateApiKey(
     });
   }
 }
-
-/**
- * Middleware that requires master key access
- */
-export async function requireMasterKey(
-  request: AuthenticatedRequest,
-  reply: FastifyReply,
-): Promise<void> {
-  if (!request.client?.isMaster) {
-    await reply.code(403).send({
-      error: "Forbidden",
-      message: "Master key required for this operation",
-    });
-  }
-}
