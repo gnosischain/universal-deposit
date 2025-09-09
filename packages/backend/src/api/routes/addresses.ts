@@ -98,6 +98,7 @@ export async function registerAddressesRoutes(
         destinationChainId,
         sourceChainId,
         ttlSeconds: 24 * 60 * 60,
+        clientId: req.client?.id, // Associate with the authenticated client
       });
 
       await reply.send({ universalAddress });

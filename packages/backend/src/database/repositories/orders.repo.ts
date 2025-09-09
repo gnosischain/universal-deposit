@@ -19,6 +19,7 @@ export type CreateOrderInput = {
   nonce: number;
   amount: bigint; // in token's smallest units (USDC 6dp)
   message?: string;
+  clientId?: string; // Optional client ID for order association
 };
 
 export async function getOrderById(id: string) {
@@ -122,6 +123,7 @@ export async function createOrder(input: CreateOrderInput) {
       amount: new Prisma.Decimal(input.amount.toString()),
       status: OrderStatus.CREATED,
       message: input.message,
+      clientId: input.clientId, // Use provided clientId (can be null/undefined)
     },
   });
 }

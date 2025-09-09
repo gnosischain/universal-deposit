@@ -10,6 +10,7 @@ export type UDARecord = {
   lastDetectedBalance: bigint; // last observed balance on source chain
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  clientId?: string; // Client ID that registered this UDA
 };
 
 export const UDA_INDEX_KEY = "uda:index";
@@ -33,6 +34,7 @@ export async function registerOrRefreshUDA(params: {
   destinationChainId: number;
   sourceChainId: number;
   ttlSeconds: number;
+  clientId?: string;
 }): Promise<void> {
   const k = keyFor(params.universalAddress);
 
@@ -47,19 +49,25 @@ export async function registerOrRefreshUDA(params: {
   const createdAt = existingCreatedAt ?? nowISO();
   const updatedAt = nowISO();
 
+  const udaData: Record<string, string> = {
+    universalAddress: params.universalAddress,
+    ownerAddress: params.ownerAddress,
+    recipientAddress: params.recipientAddress,
+    destinationChainId: String(params.destinationChainId),
+    sourceChainId: String(params.sourceChainId),
+    lastProcessedNonce: existingLastNonce ?? "-1",
+    lastDetectedBalance: existingLastBal ?? "0",
+    createdAt,
+    updatedAt,
+  };
+
+  if (params.clientId) {
+    udaData.clientId = params.clientId;
+  }
+
   await redis
     .multi()
-    .hset(k, {
-      universalAddress: params.universalAddress,
-      ownerAddress: params.ownerAddress,
-      recipientAddress: params.recipientAddress,
-      destinationChainId: String(params.destinationChainId),
-      sourceChainId: String(params.sourceChainId),
-      lastProcessedNonce: existingLastNonce ?? "-1",
-      lastDetectedBalance: existingLastBal ?? "0",
-      createdAt,
-      updatedAt,
-    })
+    .hset(k, udaData)
     .expire(k, params.ttlSeconds)
     .sadd(UDA_INDEX_KEY, params.universalAddress.toLowerCase())
     .exec();
@@ -96,6 +104,7 @@ export async function getUDA(
     lastDetectedBalance: BigInt(res.lastDetectedBalance ?? "0"),
     createdAt: res.createdAt ?? nowISO(),
     updatedAt: res.updatedAt ?? nowISO(),
+    clientId: res.clientId || undefined,
   };
 }
 

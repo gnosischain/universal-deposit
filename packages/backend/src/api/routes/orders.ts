@@ -48,7 +48,6 @@ export async function registerOrdersRoutes(
   // GET /api/v1/orders
   app.get(
     "/api/v1/orders",
-    { schema: ordersSchemas.getOrders },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
       const parsed = GetOrderQuery.safeParse((req as any).query);
       if (!parsed.success) {
@@ -62,7 +61,7 @@ export async function registerOrdersRoutes(
       // Master key can see all orders, regular clients only see their own
       const clientId = req.client!.isMaster ? undefined : req.client!.id;
 
-      // Single lookup path
+      // Single lookup by universalAddress + sourceChainId + nonce
       if (
         q.universalAddress &&
         q.sourceChainId &&

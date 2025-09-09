@@ -2,28 +2,18 @@ import { z } from "zod";
 
 // Zod schemas for validation
 export const GetOrderByIdParams = z.object({
-  id: z.string().uuid("Invalid order id"),
+  id: z.string().min(1, "Order ID is required"),
 });
 
-export const GetOrderQuery = z
-  .object({
-    universalAddress: z
-      .string()
-      .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM address")
-      .optional(),
-    sourceChainId: z.coerce.number().int().positive().optional(),
-    nonce: z.coerce.number().int().nonnegative().optional(),
-    limit: z.coerce.number().int().positive().max(100).optional(),
-  })
-  .refine(
-    (q) =>
-      (q.universalAddress && q.sourceChainId && typeof q.nonce === "number") ||
-      (q.universalAddress && !q.sourceChainId && q.nonce === undefined),
-    {
-      message:
-        "Provide either universalAddress+sourceChainId+nonce to fetch a single order, or universalAddress (+optional limit) to list recent orders.",
-    },
-  );
+export const GetOrderQuery = z.object({
+  universalAddress: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM address")
+    .optional(),
+  sourceChainId: z.coerce.number().int().positive().optional(),
+  nonce: z.coerce.number().int().nonnegative().optional(),
+  limit: z.coerce.number().int().positive().max(100).optional(),
+});
 
 export const GenerateIdBody = z.object({
   universalAddress: z
@@ -52,7 +42,6 @@ export const ordersSchemas = {
       properties: {
         id: {
           type: "string",
-          format: "uuid",
           description: "The unique order ID",
         },
       },
@@ -66,6 +55,10 @@ export const ordersSchemas = {
           universalAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
           ownerAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
           recipientAddress: { type: "string", pattern: "^0x[a-fA-F0-9]{40}$" },
+          sourceTokenAddress: {
+            type: "string",
+            pattern: "^0x[a-fA-F0-9]{40}$",
+          },
           destinationTokenAddress: {
             type: "string",
             pattern: "^0x[a-fA-F0-9]{40}$",
@@ -76,12 +69,13 @@ export const ordersSchemas = {
           amount: { type: "string", description: "Amount in wei as string" },
           status: {
             type: "string",
-            enum: ["PENDING", "DEPLOYING", "SETTLING", "COMPLETED", "FAILED"],
+            enum: ["CREATED", "DEPLOYED", "COMPLETED", "FAILED"],
             description: "Current order status",
           },
-          depositTxHash: { type: "string", nullable: true },
-          deployTxHash: { type: "string", nullable: true },
-          settleTxHash: { type: "string", nullable: true },
+          transactionHash: { type: "string", nullable: true },
+          bridgeTransactionUrl: { type: "string", nullable: true },
+          message: { type: "string", nullable: true },
+          retries: { type: "integer", default: 0 },
           createdAt: { type: "string", format: "date-time" },
           updatedAt: { type: "string", format: "date-time" },
           clientId: { type: "string", nullable: true },
@@ -91,6 +85,7 @@ export const ordersSchemas = {
           "universalAddress",
           "ownerAddress",
           "recipientAddress",
+          "sourceTokenAddress",
           "destinationTokenAddress",
           "destinationChainId",
           "sourceChainId",
@@ -179,17 +174,12 @@ export const ordersSchemas = {
               amount: { type: "string" },
               status: {
                 type: "string",
-                enum: [
-                  "PENDING",
-                  "DEPLOYING",
-                  "SETTLING",
-                  "COMPLETED",
-                  "FAILED",
-                ],
+                enum: ["CREATED", "DEPLOYED", "COMPLETED", "FAILED"],
               },
-              depositTxHash: { type: "string", nullable: true },
-              deployTxHash: { type: "string", nullable: true },
-              settleTxHash: { type: "string", nullable: true },
+              transactionHash: { type: "string", nullable: true },
+              bridgeTransactionUrl: { type: "string", nullable: true },
+              message: { type: "string", nullable: true },
+              retries: { type: "integer", default: 0 },
               createdAt: { type: "string", format: "date-time" },
               updatedAt: { type: "string", format: "date-time" },
               clientId: { type: "string", nullable: true },
@@ -214,6 +204,10 @@ export const ordersSchemas = {
                   type: "string",
                   pattern: "^0x[a-fA-F0-9]{40}$",
                 },
+                sourceTokenAddress: {
+                  type: "string",
+                  pattern: "^0x[a-fA-F0-9]{40}$",
+                },
                 destinationTokenAddress: {
                   type: "string",
                   pattern: "^0x[a-fA-F0-9]{40}$",
@@ -224,17 +218,12 @@ export const ordersSchemas = {
                 amount: { type: "string" },
                 status: {
                   type: "string",
-                  enum: [
-                    "PENDING",
-                    "DEPLOYING",
-                    "SETTLING",
-                    "COMPLETED",
-                    "FAILED",
-                  ],
+                  enum: ["CREATED", "DEPLOYED", "COMPLETED", "FAILED"],
                 },
-                depositTxHash: { type: "string", nullable: true },
-                deployTxHash: { type: "string", nullable: true },
-                settleTxHash: { type: "string", nullable: true },
+                transactionHash: { type: "string", nullable: true },
+                bridgeTransactionUrl: { type: "string", nullable: true },
+                message: { type: "string", nullable: true },
+                retries: { type: "integer", default: 0 },
                 createdAt: { type: "string", format: "date-time" },
                 updatedAt: { type: "string", format: "date-time" },
                 clientId: { type: "string", nullable: true },

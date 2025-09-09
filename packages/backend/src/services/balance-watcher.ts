@@ -146,6 +146,7 @@ async function processAddress(address: string): Promise<void> {
       nonce: Number(nonce),
       amount: balance,
       message: "Created from BalanceWatcher",
+      clientId: rec.clientId, // Use the client ID from the UDA record
     });
 
     ordersCreated.inc();

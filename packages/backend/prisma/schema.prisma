@@ -34,11 +34,11 @@ model Order {
   bridgeTransactionUrl   String?
   message                String?
   retries                Int      @default(0)
-  clientId               String   @default("0000-0000-0000-0000")
+  clientId               String?
   createdAt              DateTime @default(now())
   updatedAt              DateTime @updatedAt
 
-  client                 Client   @relation(fields: [clientId], references: [id])
+  client                 Client?  @relation(fields: [clientId], references: [id])
 
   @@unique([universalAddress, sourceChainId, nonce])
   @@index([status])
