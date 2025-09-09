@@ -209,6 +209,18 @@
       "destination": "arbitrum",
       "token": "USDC",
       "enabled": true
+    },
+    {
+      "source": "arbitrum",
+      "destination": "edu",
+      "token": "USDC",
+      "enabled": true
+    },
+    {
+      "source": "edu",
+      "destination": "arbitrum",
+      "token": "USDC",
+      "enabled": true
     }
   ]
 }
