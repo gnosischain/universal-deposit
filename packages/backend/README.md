@@ -4,8 +4,6 @@
 
 ## 🚀 Quick Start
 
-### Option 1: From Backend Directory (Recommended)
-
 ```bash
 # Navigate to backend
 cd packages/backend
@@ -18,24 +16,19 @@ cp .env.example .env
 pnpm dev:up
 ```
 
-### Option 2: From Project Root
-
-```bash
-# Install dependencies
-pnpm install
-
-# Set up backend environment
-cp packages/backend/.env.example packages/backend/.env
-# Edit .env with your RPC URLs and configuration
-
-# Complete setup and start development environment
-pnpm backend:setup
-pnpm backend:dev
-```
-
 Visit http://localhost:3000/api-docs for API documentation.
 Visit http://localhost:3000/metrics for Prometheus metrics.
 Health endpoint: http://localhost:3000/api/v1/health
+
+## 🛠️ Testing
+
+```bash
+cd packages/backend
+
+pnpm dev:up
+
+pnpm test:integration
+```
 
 ## 🎯 Overview
 

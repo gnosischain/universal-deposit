@@ -6,6 +6,7 @@ export type OrderIdParams = {
   ownerAddress: string;
   recipientAddress: string;
   destinationTokenAddress: string;
+  sourceChainId: number | bigint;
   destinationChainId: number | bigint;
   nonce: number | bigint;
 };
@@ -19,17 +20,26 @@ function normAddr(addr: string): Address {
 
 /**
  * Generate deterministic Order ID per spec:
- * keccak256(universalAddress, ownerAddress, recipientAddress, destinationToken, destinationChainId, nonce)
+ * keccak256(universalAddress, ownerAddress, recipientAddress, destinationToken, sourceChainId, destinationChainId, nonce)
  * All addresses are checksummed; chainId and nonce encoded as uint256.
  */
 export function generateOrderId(params: OrderIdParams): `0x${string}` {
   const packed = encodePacked(
-    ["address", "address", "address", "address", "uint256", "uint256"],
+    [
+      "address",
+      "address",
+      "address",
+      "address",
+      "uint256",
+      "uint256",
+      "uint256",
+    ],
     [
       normAddr(params.universalAddress),
       normAddr(params.ownerAddress),
       normAddr(params.recipientAddress),
       normAddr(params.destinationTokenAddress),
+      BigInt(params.sourceChainId),
       BigInt(params.destinationChainId),
       BigInt(params.nonce),
     ],

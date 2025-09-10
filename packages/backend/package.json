@@ -38,7 +38,8 @@
     "setup": "pnpm install --frozen-lockfile && pnpm prisma:generate && pnpm db:migrate",
     "start": "node dist/src/index.js",
     "test": "vitest run --config vitest.config.ts --passWithNoTests",
-    "test:cov": "vitest run --config vitest.config.ts --coverage"
+    "test:cov": "vitest run --config vitest.config.ts --coverage",
+    "test:integration": "vitest run test/integration/full-workflow.test.ts --config vitest.config.ts"
   },
   "dependencies": {
     "@fastify/cors": "^10.0.0",

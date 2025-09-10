@@ -129,6 +129,7 @@ async function processAddress(address: string): Promise<void> {
       ownerAddress: rec.ownerAddress,
       recipientAddress: rec.recipientAddress,
       destinationTokenAddress: usdcDst,
+      sourceChainId: rec.sourceChainId,
       destinationChainId: rec.destinationChainId,
       nonce,
     });

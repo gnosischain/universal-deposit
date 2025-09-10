@@ -26,6 +26,7 @@ export const GenerateIdBody = z.object({
   destinationTokenAddress: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid EVM address"),
+  sourceChainId: z.coerce.number().int().positive(),
   destinationChainId: z.coerce.number().int().positive(),
   nonce: z.coerce.number().int().nonnegative(),
 });
@@ -276,6 +277,11 @@ export const ordersSchemas = {
           pattern: "^0x[a-fA-F0-9]{40}$",
           description: "The token address on destination chain",
         },
+        sourceChainId: {
+          type: "integer",
+          minimum: 1,
+          description: "The source chain ID",
+        },
         destinationChainId: {
           type: "integer",
           minimum: 1,
@@ -292,6 +298,7 @@ export const ordersSchemas = {
         "ownerAddress",
         "recipientAddress",
         "destinationTokenAddress",
+        "sourceChainId",
         "destinationChainId",
         "nonce",
       ],
