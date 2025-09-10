@@ -8,6 +8,7 @@ import {
 import { TestEnvironment, sleep, formatUsdc } from "../setup/test-env";
 import { TEST_CONFIG } from "../setup/test-config";
 import ERC20Abi from "../../../src/blockchain/contracts/ERC20.abi.json";
+import { withBalanceRetry, withTransactionRetry } from "./rpc-retry";
 
 /**
  * Blockchain utilities for integration tests
@@ -27,14 +28,19 @@ export class BlockchainUtils {
       throw new Error(`USDC address not configured for chain ${chainId}`);
     }
 
-    const balance = await publicClient.readContract({
-      address: usdcAddress,
-      abi: ERC20Abi,
-      functionName: "balanceOf",
-      args: [address],
-    });
-
-    return balance as bigint;
+    return withBalanceRetry(
+      async () => {
+        const balance = await publicClient.readContract({
+          address: usdcAddress,
+          abi: ERC20Abi,
+          functionName: "balanceOf",
+          args: [address],
+        });
+        return balance as bigint;
+      },
+      address,
+      chainId,
+    );
   }
 
   /**
@@ -57,7 +63,7 @@ export class BlockchainUtils {
     const walletClient = walletClientFor(sourceChainId, "deployer");
     const usdcAddress = getUsdcAddress(sourceChainId);
 
-    if (!walletClient || !walletClient.account) {
+    if (!walletClient) {
       throw new Error(
         `Wallet client not configured for chain ${sourceChainId}`,
       );
@@ -71,27 +77,39 @@ export class BlockchainUtils {
       `Sending ${formatUsdc(amount)} to ${to} on chain ${sourceChainId}`,
     );
 
-    const hash = await walletClient.writeContract({
-      address: usdcAddress,
-      abi: ERC20Abi,
-      functionName: "transfer",
-      args: [to, amount],
-      chain: walletClient.chain,
-      account: walletClient.account,
-    });
+    return withTransactionRetry(
+      async () => {
+        if (!walletClient || !walletClient.account) {
+          throw new Error(
+            `Wallet client not configured for chain ${sourceChainId}`,
+          );
+        }
 
-    console.log(`Transaction sent: ${hash}`);
+        const hash = await walletClient.writeContract({
+          address: usdcAddress,
+          abi: ERC20Abi,
+          functionName: "transfer",
+          args: [to, amount],
+          chain: walletClient.chain,
+          account: walletClient.account,
+        });
 
-    // Wait for transaction confirmation
-    const publicClient = getPublicClient(sourceChainId);
-    const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        console.log(`Transaction sent: ${hash}`);
 
-    if (receipt.status !== "success") {
-      throw new Error(`Transaction failed: ${hash}`);
-    }
+        // Wait for transaction confirmation
+        const publicClient = getPublicClient(sourceChainId);
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-    console.log(`Transaction confirmed: ${hash}`);
-    return hash;
+        if (receipt.status !== "success") {
+          throw new Error(`Transaction failed: ${hash}`);
+        }
+
+        console.log(`Transaction confirmed: ${hash}`);
+        return hash;
+      },
+      `Send ${formatUsdc(amount)} USDC to ${to}`,
+      sourceChainId,
+    );
   }
 
   /**

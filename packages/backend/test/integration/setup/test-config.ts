@@ -6,6 +6,14 @@ export const TEST_CONFIG = {
   MAX_RETRIES: 20,
   TIMEOUT_MS: 400000, // 20 retries × 20 seconds = 400 seconds = 6.66 minutes
 
+  // RPC retry configuration
+  RPC_RETRY: {
+    MAX_ATTEMPTS: 5,
+    BASE_DELAY_MS: 1000, // Start with 1 second
+    BACKOFF_MULTIPLIER: 1.5, // 1.5x delay each retry (1s, 1.5s, 2.25s, 3.4s, 5.1s)
+    MAX_DELAY_MS: 10000, // Cap at 10 seconds
+  },
+
   // Balance tolerance (1% = 100 basis points)
   BALANCE_TOLERANCE_BPS: 100,
 
