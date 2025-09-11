@@ -48,6 +48,7 @@ export async function registerOrdersRoutes(
   // GET /api/v1/orders
   app.get(
     "/api/v1/orders",
+    { schema: ordersSchemas.getOrders },
     async (req: AuthenticatedRequest, reply: FastifyReply) => {
       const parsed = GetOrderQuery.safeParse((req as any).query);
       if (!parsed.success) {

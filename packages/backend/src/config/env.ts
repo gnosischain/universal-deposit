@@ -46,10 +46,6 @@ const EnvSchema = z.object({
 
   // API
   API_PORT: optionalNumberFromString.default("3000"),
-  API_SECRET_KEY: z
-    .string()
-    .min(8, "API_SECRET_KEY must be set")
-    .default("dev-secret"),
 
   // Datastores
   DATABASE_URL: z.string().url().describe("PostgreSQL connection URL"),
