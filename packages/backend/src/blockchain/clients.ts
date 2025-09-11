@@ -2,7 +2,6 @@ import type { Address, Chain } from "viem";
 import {
   getPublicClient,
   chainForId as chainForIdFromRegistry,
-  walletClientFor as walletFromRegistry,
   getProxyFactoryAddressFromRegistry,
   getChainById,
 } from "../config/chains";
@@ -14,10 +13,6 @@ import {
 
 export function chainForId(id: number): Chain {
   return chainForIdFromRegistry(id);
-}
-
-export function walletClientFor(chainId: number, kind: "deployer" | "settler") {
-  return walletFromRegistry(chainId, kind);
 }
 
 export function pickSourceNetwork(sourceChainId: number): {

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { createPublicClient, createWalletClient, http } from "viem";
-import type { Chain } from "viem";
+import type { Chain, PublicClient } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { config as env } from "./env";
 import { ChainsRegistrySchema } from "./chains.schema";
@@ -137,17 +137,13 @@ export function chainForId(id: number): Chain {
 /**
  * Public client builders
  */
-export function getPublicClient(source: string | number) {
+export function getPublicClient(source: string | number): PublicClient {
   const entry =
     typeof source === "string" ? getChainByKey(source) : getChainById(source);
   return createPublicClient({
     chain: toViemChain(entry),
     transport: http(chooseRpcHttp(entry.key)),
   });
-}
-
-export function getPublicClientById(id: number) {
-  return getPublicClient(id);
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { Address } from "viem";
+import { getPublicClient } from "../config/chains";
 import { logger } from "../utils/logger";
 import { config } from "../config/env";
 import {
@@ -10,7 +11,6 @@ import {
 import { ensureOrder } from "../database/repositories/orders.repo";
 import { ordersCreated } from "../monitoring/metrics";
 import {
-  publicClientFor,
   getSourceUsdcAddress,
   getDestinationUsdcAddress,
 } from "../blockchain/utils";
@@ -45,7 +45,7 @@ async function processAddress(address: string): Promise<void> {
       return;
     }
 
-    const client = publicClientFor(rec.sourceChainId);
+    const client = getPublicClient(rec.sourceChainId);
     const usdcSrc = getSourceUsdcAddress(rec.sourceChainId);
     const usdcDst = getDestinationUsdcAddress(rec.destinationChainId);
     if (!usdcSrc || !usdcDst) {

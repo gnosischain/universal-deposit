@@ -10,14 +10,13 @@ import {
   updateOrderStatus,
 } from "../database/repositories/orders.repo";
 import {
-  publicClientFor,
   getSourceUsdcAddress,
   getStargateUsdcAddress,
 } from "../blockchain/utils";
 import ERC20Abi from "../blockchain/contracts/ERC20.abi.json";
 import UDAAbi from "../blockchain/contracts/UniversalDepositAccount.abi.json" with { type: "json" };
 import { startHeartbeat } from "../monitoring/heartbeat";
-import { walletClientFor } from "../blockchain/clients";
+import { getPublicClient, walletClientFor } from "../config/chains";
 import { config } from "../config/env";
 
 /**
@@ -78,7 +77,7 @@ export async function startSettleWorker(): Promise<void> {
             }
 
             // Verify source balance > 0 (basic sanity check)
-            const client = publicClientFor(order.sourceChainId);
+            const client = getPublicClient(order.sourceChainId);
             const usdcSrc = getSourceUsdcAddress(order.sourceChainId);
             if (!usdcSrc) {
               await updateOrderStatus(order.id, "FAILED" as any, {

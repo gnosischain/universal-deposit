@@ -9,9 +9,9 @@ import {
   getOrderById,
   updateOrderStatus,
 } from "../database/repositories/orders.repo";
-import { publicClientFor, getProxyFactoryAddress } from "../blockchain/utils";
+import { getProxyFactoryAddress } from "../blockchain/utils";
 import { startHeartbeat } from "../monitoring/heartbeat";
-import { walletClientFor } from "../blockchain/clients";
+import { getPublicClient, walletClientFor } from "../config/chains";
 import { config } from "../config/env";
 import ProxyFactoryAbi from "../blockchain/contracts/ProxyFactory.abi.json" with { type: "json" };
 
@@ -81,7 +81,7 @@ export async function startDeployWorker(): Promise<void> {
             }
 
             // Check if UDA is already deployed
-            const client = publicClientFor(order.sourceChainId);
+            const client = getPublicClient(order.sourceChainId);
             const bytecode = (await client.getBytecode({
               address: order.universalAddress as Address,
             })) as Hex | null;

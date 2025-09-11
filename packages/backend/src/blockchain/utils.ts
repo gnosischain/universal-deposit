@@ -1,17 +1,9 @@
 import type { Address } from "viem";
 import {
-  getPublicClient,
   getUsdcAddress as getUsdcFromRegistry,
   getProxyFactoryAddressFromRegistry,
   getStargateUsdcAddress as getStargateUsdcFromRegistry,
 } from "../config/chains";
-
-/**
- * Return a viem public client for a given chain id using the registry.
- */
-export function publicClientFor(chainId: number) {
-  return getPublicClient(chainId);
-}
 
 /**
  * Return configured USDC token address for a given chain id.
