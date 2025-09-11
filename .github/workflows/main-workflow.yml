@@ -26,4 +26,3 @@ jobs:
     test-integration:
         uses: ./.github/workflows/test-integration.yml
         needs: lint
-        secrets: inherit

@@ -1,46 +1,14 @@
-name: Integration Tests
+name: Tests
 
 on:
     workflow_call:
-        inputs:
-            run_integration_tests:
-                description: "Run integration tests"
-                required: false
-                default: true
-                type: boolean
-    workflow_dispatch:
-        inputs:
-            run_integration_tests:
-                description: "Run integration tests"
-                required: false
-                default: true
-                type: boolean
-            debug_mode:
-                description: "Enable debug logging"
-                required: false
-                default: false
-                type: boolean
-
-concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
 
 jobs:
-    integration-tests:
-        name: Integration Tests with Services
+    unit:
+        name: Integration tests
         runs-on: ubuntu-latest
-        environment: prod
-        timeout-minutes: 20
-
-        # Only run if explicitly requested or on main branch PRs
-        if: |
-            inputs.run_integration_tests == true ||
-            github.base_ref == 'main' ||
-            github.base_ref == 'dev' ||
-            contains(github.event.pull_request.labels.*.name, 'test-integration')
-
         steps:
-            - name: Check out repository
+            - name: Check out github repository
               uses: actions/checkout@v4
               with:
                   fetch-depth: 1
@@ -51,115 +19,5 @@ jobs:
             - name: Install dependencies
               run: pnpm install --frozen-lockfile
 
-            - name: Setup test environment
-              working-directory: packages/backend
-              run: |
-                  # Create .env file for the backend
-                  cat > .env << EOF
-                  # Blockchain configuration
-                  DEPLOYMENT_PRIVATE_KEY=${{ secrets.TEST_DEPLOYMENT_PRIVATE_KEY }}
-                  SETTLEMENT_PRIVATE_KEY=${{ secrets.TEST_SETTLEMENT_PRIVATE_KEY }}
-                  RPC_API_KEY=${{ secrets.TEST_RPC_API_KEY }}
-                  ENABLE_MAINNET_TX=true
-
-                  # Test configuration
-                  NODE_ENV=test
-                  LOG_LEVEL=${{ inputs.debug_mode == true && 'debug' || 'info' }}
-                  BALANCE_CHECK_INTERVAL_MS=5000
-                  RATE_LIMIT_WINDOW_MS=86400000
-                  RATE_LIMIT_MAX_REQUESTS=1000
-                  HEARTBEAT_INTERVAL_MS=5000
-                  SLIPPAGE_PERCENTAGE=500
-                  VERIFY_DEST_CHAIN=false
-
-                  # API configuration
-                  API_SECRET_KEY=test-secret-key-for-ci
-                  DEVELOPER_MASTER_KEY=test-master-key-for-ci-32-chars-long
-                  EOF
-
-            - name: Start services with docker-compose
-              working-directory: packages/backend
-              run: |
-                  echo "Starting services with docker-compose..."
-                  docker-compose -f docker-compose.dev.yml up -d
-
-                  echo "Waiting for services to be healthy..."
-                  timeout 120s bash -c '
-                    while ! docker-compose -f docker-compose.dev.yml ps | grep -q "healthy"; do
-                      echo "Waiting for services to be healthy..."
-                      sleep 5
-                    done
-                  '
-
-                  echo "All services are healthy!"
-
-            - name: Verify service health
-              working-directory: packages/backend
-              run: |
-                  echo "=== Service Health Check ==="
-                  docker-compose -f docker-compose.dev.yml ps
-
-                  # Check API health endpoint
-                  echo "API status:"
-                  curl -f http://localhost:3000/api/v1/health
-
-                  echo "=== All services are ready! ==="
-
             - name: Run integration tests
-              working-directory: packages/backend
-              env:
-                  NODE_ENV: test
-                  LOG_LEVEL: ${{ inputs.debug_mode == true && 'debug' || 'info' }}
-              run: |
-                  echo "Starting integration tests..."
-                  echo "Test configuration:"
-                  echo "- Debug mode: ${{ inputs.debug_mode }}"
-                  echo "- Timeout: 20 minutes"
-                  echo "- RPC retry enabled: 5 attempts"
-
-                  # Run the integration tests
-                  pnpm test:integration
-              timeout-minutes: 15
-
-            - name: Collect service logs
-              if: always()
-              working-directory: packages/backend
-              run: |
-                  echo "=== Collecting service logs ==="
-                  docker-compose -f docker-compose.dev.yml logs --tail=100
-
-            - name: Upload test artifacts
-              if: always()
-              uses: actions/upload-artifact@v4
-              with:
-                  name: integration-test-results-${{ github.run_id }}
-                  path: |
-                      packages/backend/test-results/
-                      packages/backend/coverage/
-                      packages/backend/.env
-                  retention-days: 7
-
-            - name: Cleanup services
-              if: always()
-              working-directory: packages/backend
-              run: |
-                  echo "Cleaning up services..."
-                  docker-compose -f docker-compose.dev.yml down -v
-                  echo "Cleanup completed!"
-
-            - name: Report test results
-              if: always()
-              run: |
-                  echo "=== Integration Test Results ==="
-                  if [ "${{ job.status }}" == "success" ]; then
-                    echo "✅ All integration tests passed!"
-                    echo "The Universal Deposit system is working correctly across all chains."
-                  else
-                    echo "❌ Integration tests failed!"
-                    echo "Check the logs above for details on what went wrong."
-                    echo "Common issues:"
-                    echo "- RPC connectivity problems"
-                    echo "- Insufficient test wallet funding"
-                    echo "- Service startup timeouts"
-                    echo "- Cross-chain bridge delays"
-                  fi
+              run: pnpm test:integration
