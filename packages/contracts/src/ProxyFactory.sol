@@ -18,11 +18,17 @@ contract ProxyFactory {
   /// @notice The UniversalDepositManager contract address used for all accounts
   address public immutable UD_MANAGER;
 
+  /// @notice revert when UniversalDepositAccount proxy deployment fail
+  error UDADeploymentFailed();
+
+  /// @notice emit when UniversalDepositAccount proxy deployment success
+  event UDACreated(address indexed UD);
   /**
    * @notice Initializes the factory with implementation and manager addresses
    * @param _implementation The UniversalDepositAccount implementation contract
    * @param _udManager The UniversalDepositManager contract for routing configurations
    */
+
   constructor(address _implementation, address _udManager) {
     IMPLEMENTATION = _implementation;
     UD_MANAGER = _udManager;
@@ -54,6 +60,11 @@ contract ProxyFactory {
       salt := keccak256(ptr, 0x60)
     }
     address proxy = address(new ERC1967Proxy{salt: salt}(IMPLEMENTATION, data));
+    if (proxy == address(0)) {
+      revert UDADeploymentFailed();
+    } else {
+      emit UDACreated(proxy);
+    }
     return proxy;
   }
 

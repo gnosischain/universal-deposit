@@ -98,6 +98,7 @@ contract UniversalDepositManagerTest is Test {
   function testOwnership(
     address _newOwner
   ) public {
+    vm.assume(_newOwner!= owner);
     address srcStargateToken = makeAddr('srcStargateToken');
     address dstStargateToken = makeAddr('dstStargateToken');
     address srcToken = makeAddr('srcToken');
