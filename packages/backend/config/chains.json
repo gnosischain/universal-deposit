@@ -10,7 +10,7 @@
       },
       "roles": ["source", "destination"],
       "contracts": {
-        "proxyFactory": "0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21",
+        "proxyFactory": "0x9cc00c9C975298D3299517130C0fBd4B0F40C6A4",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10",
         "usdc": "0x12a272A581feE5577A5dFa371afEB4b2F3a8C2F8",
@@ -48,7 +48,7 @@
       },
       "roles": ["source", "destination"],
       "contracts": {
-        "proxyFactory": "0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21",
+        "proxyFactory": "0x9cc00c9C975298D3299517130C0fBd4B0F40C6A4",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10",
         "usdc": "0x2a22f9c3b484c3629090FeED35F17Ff8F88f76F0",
@@ -78,7 +78,7 @@
       },
       "roles": ["source", "destination"],
       "contracts": {
-        "proxyFactory": "0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21",
+        "proxyFactory": "0x9cc00c9C975298D3299517130C0fBd4B0F40C6A4",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10",
         "usdc": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
@@ -108,7 +108,7 @@
       },
       "roles": ["source", "destination"],
       "contracts": {
-        "proxyFactory": "0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21",
+        "proxyFactory": "0x9cc00c9C975298D3299517130C0fBd4B0F40C6A4",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10",
         "usdc": "0x27a16dc786820B16E5c9028b75B99F6f604b5d26",
@@ -138,7 +138,7 @@
       },
       "roles": ["source", "destination"],
       "contracts": {
-        "proxyFactory": "0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21",
+        "proxyFactory": "0x9cc00c9C975298D3299517130C0fBd4B0F40C6A4",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10",
         "usdc": "0xc026395860Db2d07ee33e05fE50ed7bD583189C7",
@@ -168,7 +168,7 @@
       },
       "roles": ["source", "destination"],
       "contracts": {
-        "proxyFactory": "0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21",
+        "proxyFactory": "0x9cc00c9C975298D3299517130C0fBd4B0F40C6A4",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10",
         "usdc": "0xcE8CcA271Ebc0533920C83d39F417ED6A0abB7D0",
