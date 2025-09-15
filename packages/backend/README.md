@@ -27,7 +27,7 @@ cd packages/backend
 
 pnpm dev:up
 
-pnpm test:integration
+pnpm test:local-integration
 ```
 
 ## 🎯 Overview
