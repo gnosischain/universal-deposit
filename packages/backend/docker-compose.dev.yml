@@ -1,0 +1,228 @@
+name: universal-deposit-dev
+
+services:
+  # Infrastructure services
+  postgres:
+    image: postgres:16-alpine
+    container_name: ud_postgres_dev
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: universal_deposit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d universal_deposit"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: ud_redis_dev
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ud_rabbitmq_dev
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: password
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data_dev:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API service (hot reload)
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ud_api_dev
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/universal_deposit}
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      API_PORT: 3000
+      RUN_API: "true"
+      RUN_BALANCE_WATCHER: "false"
+      RUN_DEPLOY_WORKER: "false"
+      RUN_SETTLE_WORKER: "false"
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      SKIP_PRISMA_GENERATE: "false"
+      SKIP_DB_MIGRATIONS: "false"
+      CHAINS_CONFIG_PATH: "/app/config/chains.json"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./src:/app/src:ro
+      - ./prisma:/app/prisma:ro
+      - ./package.json:/app/package.json:ro
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./.env:/app/.env:ro
+      - ./config:/app/config:ro
+      - node_modules_cache:/app/node_modules
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Balance watcher service
+  balance-watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ud_balance_watcher_dev
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/universal_deposit}
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      RUN_API: "false"
+      RUN_BALANCE_WATCHER: "true"
+      RUN_DEPLOY_WORKER: "false"
+      RUN_SETTLE_WORKER: "false"
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      SKIP_PRISMA_GENERATE: "true"
+      SKIP_DB_MIGRATIONS: "true"
+      CHAINS_CONFIG_PATH: "/app/config/chains.json"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src:ro
+      - ./prisma:/app/prisma:ro
+      - ./package.json:/app/package.json:ro
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./.env:/app/.env:ro
+      - ./config:/app/config:ro
+      - node_modules_cache:/app/node_modules
+    restart: unless-stopped
+
+  # Deploy worker service
+  deploy-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ud_deploy_worker_dev
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/universal_deposit}
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      RUN_API: "false"
+      RUN_BALANCE_WATCHER: "false"
+      RUN_DEPLOY_WORKER: "true"
+      RUN_SETTLE_WORKER: "false"
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      SKIP_PRISMA_GENERATE: "true"
+      SKIP_DB_MIGRATIONS: "true"
+      CHAINS_CONFIG_PATH: "/app/config/chains.json"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src:ro
+      - ./prisma:/app/prisma:ro
+      - ./package.json:/app/package.json:ro
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./.env:/app/.env:ro
+      - ./config:/app/config:ro
+      - node_modules_cache:/app/node_modules
+    restart: unless-stopped
+
+  # Settle worker service
+  settle-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: ud_settle_worker_dev
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/universal_deposit}
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://admin:password@rabbitmq:5672
+      RUN_API: "false"
+      RUN_BALANCE_WATCHER: "false"
+      RUN_DEPLOY_WORKER: "false"
+      RUN_SETTLE_WORKER: "true"
+      NODE_ENV: development
+      LOG_LEVEL: debug
+      SKIP_PRISMA_GENERATE: "true"
+      SKIP_DB_MIGRATIONS: "true"
+      CHAINS_CONFIG_PATH: "/app/config/chains.json"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    volumes:
+      - ./src:/app/src:ro
+      - ./prisma:/app/prisma:ro
+      - ./package.json:/app/package.json:ro
+      - ./pnpm-lock.yaml:/app/pnpm-lock.yaml:ro
+      - ./tsconfig.json:/app/tsconfig.json:ro
+      - ./.env:/app/.env:ro
+      - ./config:/app/config:ro
+      - node_modules_cache:/app/node_modules
+    restart: unless-stopped
+
+volumes:
+  pg_data_dev:
+  redis_data_dev:
+  rabbitmq_data_dev:
+  node_modules_cache:

@@ -12,6 +12,12 @@
     "author": "Wonderland",
     "type": "module",
     "scripts": {
+        "backend:db:reset": "cd packages/backend && pnpm db:reset",
+        "backend:dev": "cd packages/backend && pnpm dev:full",
+        "backend:down": "cd packages/backend && pnpm dev:down",
+        "backend:health": "cd packages/backend && pnpm health",
+        "backend:logs": "cd packages/backend && pnpm dev:logs",
+        "backend:setup": "cd packages/backend && pnpm setup",
         "build": "turbo run build",
         "check-types": "turbo run check-types",
         "clean": "turbo run clean",
