@@ -207,9 +207,9 @@ IUniversalDepositAccount(userAccount).settle{value: feeRequired}(sourceToken, ma
 
 | Contract                | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| UniversalDepositAccount | 0x4Ca33903345deF71a54Bfb26d1F62bEf6cF1fd10 |
+| UniversalDepositAccount | 0xA7FEbF3D2c50076eb92eE79BA6083E51873528DD |
 | UniversalDepositManager | 0x72439FDa3a67988b241060c0A0d3Cb8AAC123345 |
-| ProxyFactory            | 0xa7B9f00E4D8e9B798F79b8585Ac6b3E52158Ce21 |
+| ProxyFactory            | 0x976E725beeaf694Fe79cA50CD9B3b657193FcDb0 |
 
 ## References
 
