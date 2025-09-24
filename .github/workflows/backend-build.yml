@@ -1,4 +1,4 @@
-name: Backend Build Staging
+name: Backend Build
 
 on:
   workflow_dispatch:
