@@ -28,6 +28,7 @@ jobs:
           context: packages/backend
           file: packages/backend/Dockerfile.dev
           push: true
+          platforms: linux/amd64,linux/arm64
           tags: |
             gnosischain/universaldeposit:latest
             gnosischain/universaldeposit:${{ github.sha }}
