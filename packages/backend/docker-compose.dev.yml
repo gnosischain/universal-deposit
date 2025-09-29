@@ -52,9 +52,7 @@ services:
 
   # API service (hot reload)
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: gnosischain/universaldeposit:latest
     container_name: ud_api_dev
     env_file:
       - .env
@@ -100,9 +98,7 @@ services:
 
   # Balance watcher service
   balance-watcher:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: gnosischain/universaldeposit:latest
     container_name: ud_balance_watcher_dev
     env_file:
       - .env
@@ -141,9 +137,7 @@ services:
 
   # Deploy worker service
   deploy-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: gnosischain/universaldeposit:latest
     container_name: ud_deploy_worker_dev
     env_file:
       - .env
@@ -182,9 +176,7 @@ services:
 
   # Settle worker service
   settle-worker:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
+    image: gnosischain/universaldeposit:latest
     container_name: ud_settle_worker_dev
     env_file:
       - .env
