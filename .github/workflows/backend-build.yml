@@ -1,4 +1,4 @@
-name: Backend Build
+name: Backend Build and Deploy
 
 on:
   workflow_dispatch:
@@ -9,6 +9,8 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ github.sha }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -32,3 +34,44 @@ jobs:
           tags: |
             gnosischain/universaldeposit:latest
             gnosischain/universaldeposit:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/dev'
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials gnosischain-staging \
+            --region=europe-west1 \
+            --project=gnosischain-staging
+
+      - name: Update deployment with new image
+        run: |
+          # Update all containers that use the universal deposit image
+          kubectl patch deployment universal-deposit \
+            --namespace=gc-tools \
+            --patch='{"spec":{"template":{"spec":{"containers":[
+              {"name":"universal-deposit-api","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"},
+              {"name":"universal-deposit-balance-watcher","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"},
+              {"name":"universal-deposit-deploy-worker","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"},
+              {"name":"universal-deposit-settle-worker","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"}
+            ]}}}}'
+
+      - name: Wait for deployment rollout
+        run: |
+          kubectl rollout status deployment/universal-deposit \
+            --namespace=gc-tools \
+            --timeout=600s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n gc-tools -l app=universal-deposit
