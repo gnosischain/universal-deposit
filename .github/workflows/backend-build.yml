@@ -64,17 +64,11 @@ jobs:
             --region=europe-west1 \
             --project=gnosischain-staging
 
-      - name: Update deployment with new image
+      - name: Restart deployment to pull latest image
         run: |
-          # Update all containers that use the universal deposit image
-          kubectl patch deployment universal-deposit \
-            --namespace=gc-tools \
-            --patch='{"spec":{"template":{"spec":{"containers":[
-              {"name":"universal-deposit-api","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"},
-              {"name":"universal-deposit-balance-watcher","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"},
-              {"name":"universal-deposit-deploy-worker","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"},
-              {"name":"universal-deposit-settle-worker","image":"gnosischain/universaldeposit:${{ needs.build-and-push.outputs.image-tag }}"}
-            ]}}}}'
+          # Restart the deployment to pull the latest image
+          kubectl rollout restart deployment/universal-deposit \
+            --namespace=gc-tools
 
       - name: Wait for deployment rollout
         run: |
