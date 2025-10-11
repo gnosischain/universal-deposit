@@ -135,7 +135,7 @@ contract UniversalDepositAccount is Initializable, OwnableUpgradeable {
 
     // Get accurate minimum amount from quote
     (,, OFTReceipt memory receipt) = IStargate(srcStargateToken).quoteOFT(sendParam);
-    uint256 minReceivedAmount = (receipt.amountSentLD * (10_000 - maxSlippage)) / 10_000;
+    uint256 minReceivedAmount = (receipt.amountReceivedLD * (10_000 - maxSlippage)) / 10_000;
     if (receipt.amountReceivedLD < minReceivedAmount) {
       revert SlippageToHigh(minReceivedAmount, receipt.amountReceivedLD);
     }

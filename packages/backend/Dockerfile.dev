@@ -1,5 +1,5 @@
 # Development Dockerfile with hot reloading
-FROM --platform=linux/arm64 node:22-alpine AS development
+FROM node:22-alpine AS development
 
 # Set working directory inside the container
 WORKDIR /app
@@ -18,6 +18,15 @@ COPY tsconfig.json ./
 # Install pnpm and dependencies (including devDependencies for tsx)
 RUN pnpm install
 
+# This ensures the files exist when the container starts
+COPY prisma ./prisma/
+COPY src ./src/
+COPY config ./config/
+
+# Generate Prisma client during build
+# This creates the client so it's available even if generation is skipped at runtime
+RUN pnpm prisma generate || echo "Prisma generate failed during build, will retry at runtime"
+
 # Expose the API port
 EXPOSE 3000
 
@@ -34,12 +43,20 @@ ENV NODE_ENV=development \
 RUN echo '#!/bin/sh' > /app/start.sh && \
     echo 'set -e' >> /app/start.sh && \
     echo 'echo "Startup with NODE_ENV=$NODE_ENV RUN_API=$RUN_API RUN_BALANCE_WATCHER=$RUN_BALANCE_WATCHER RUN_DEPLOY_WORKER=$RUN_DEPLOY_WORKER RUN_SETTLE_WORKER=$RUN_SETTLE_WORKER"' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
+    echo '# Check if prisma directory exists (it should from volumes)' >> /app/start.sh && \
+    echo 'if [ ! -d "prisma" ]; then' >> /app/start.sh && \
+    echo '  echo "ERROR: prisma directory not found!";' >> /app/start.sh && \
+    echo '  exit 1;' >> /app/start.sh && \
+    echo 'fi' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
     echo 'if [ "$SKIP_PRISMA_GENERATE" = "true" ]; then' >> /app/start.sh && \
     echo '  echo "Skipping Prisma client generation";' >> /app/start.sh && \
     echo 'else' >> /app/start.sh && \
     echo '  echo "Generating Prisma client...";' >> /app/start.sh && \
     echo '  pnpm prisma:generate;' >> /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
     echo 'if [ "$SKIP_DB_MIGRATIONS" = "true" ]; then' >> /app/start.sh && \
     echo '  echo "Skipping DB migrations";' >> /app/start.sh && \
     echo 'else' >> /app/start.sh && \
@@ -54,6 +71,7 @@ RUN echo '#!/bin/sh' > /app/start.sh && \
     echo '    pnpm db:migrate;' >> /app/start.sh && \
     echo '  fi;' >> /app/start.sh && \
     echo 'fi' >> /app/start.sh && \
+    echo '' >> /app/start.sh && \
     echo 'echo "Starting development server..."' >> /app/start.sh && \
     echo 'exec pnpm run dev' >> /app/start.sh && \
     chmod +x /app/start.sh

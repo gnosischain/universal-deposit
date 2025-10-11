@@ -1,0 +1,81 @@
+name: Backend Build and Deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      image-tag: ${{ github.sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: packages/backend
+          file: packages/backend/Dockerfile.dev
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            gnosischain/universaldeposit:latest
+            gnosischain/universaldeposit:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    if: github.ref == 'refs/heads/dev'
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: 'actions/checkout@v4'
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Install GKE auth plugin
+        run: |
+          gcloud components install gke-gcloud-auth-plugin
+
+      - name: Get GKE credentials
+        run: |
+          gcloud container clusters get-credentials gnosischain-staging \
+            --region=europe-west1 \
+            --project=gnosischain-staging
+
+      - name: Restart deployment to pull latest image
+        run: |
+          # Restart the deployment to pull the latest image
+          kubectl rollout restart deployment/universal-deposit \
+            --namespace=gc-tools
+
+      - name: Wait for deployment rollout
+        run: |
+          kubectl rollout status deployment/universal-deposit \
+            --namespace=gc-tools \
+            --timeout=600s
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n gc-tools -l app=universal-deposit
