@@ -3,8 +3,8 @@
 ### Universal Deposit address
 
 1. Functions
-    1. `settle() (public, payable)`
-        1. quote fee (how much can be sponsored? are we going to make user pay for it?)
+    1. `settle(address srcToken, uint256 maxSlippage) (public, payable)`
+        1. quote Stargate fee
             1. 3 parts
                 1. 6bps on USDC
                 2. gas fee (Sponsored by Paymaster if AA is used)
@@ -13,44 +13,35 @@
             3. dynamic transfer fee https://stargateprotocol.gitbook.io/stargate/v2-user-docs/whats-new-in-stargate-v2/fees#stargate-transaction-fees-rebates
         2. call USDC.approve(Stargate) & Stargate.sendToken
         3. nonce +=1
-        4. emit `Settled(uint256 indexed amount, address indexed recipient, uint256 indexed destination chain id)`
-        5. require `USDC.balanceOf(address(this))>minAmount`
+        4. emit `BridgingInitiated(uint256 indexed nonce)`
     2. `receive() external payable`
         1. revert
-    3. `withdrawToken(token, receiver) onlyOwner` (=Refund address)
+    3. `withdrawToken(token, receiver) onlyOwner`
         1. Allow the owner to withdraw
-        2. Prerequisite: the contract has to be first deployed & set the owner
-        3. emit `TokenWithdrawn(address indexed token, address indexed receiver, uint256 indexed amount)`
-    4. supportedToken (view)
-        1. return USDC.e address
-    5. owner (view)
-        1. refundAddress (specified by user when first creating the wallet)
-    6. nonce (view)
-        1. unique nonce to identify each of the settle transaction, incremental by 1
-    7. version (view)
-        1. return `1.0.0`
+        2. Prerequisite: the contract has to be first deployed & set the owner address
+        3. emit `WithdrawUnsupportedToken(address indexed token, uint256 indexed amount)`
+    4. owner (view)
+        1. Address that can call `withdrawToken`
+    5. nonce (view)
+        1. Incremental counter for bridge operations
+    6. version (view)
+        1. return `1`, the current version only support Stargate
 2. Ownership
-    1. `refundAddress` when specify through API `/registerAddress`
-    2. Note: hard to track manually which address has sent the token to the universal address since we only track the balance increase of the address.
+    1. `owner` when specify through API `/registerAddress`,
 
 ### Proxy
 
-1. https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.4.0/contracts/proxy/Proxy.sol
+1. https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v5.4.0/contracts/proxy/ERC1967/ERC1967Proxy.sol
     1. Allow all the proxy clones to point to the same implementation contract, after upgrading.
-2. Functions
-    1. `implementation` (view)
-    2. `upgradeTo` (write, onlyOwner)
-    3. `owner` (view)
-3. Initialize owner for the implementation contract.
+2. Initialize owner for the implementation contract.
 
 ## Proxy Factory
 
 1. Functions
-    1. `createUniversalAddress(address refundAddress, address recipient, address destination token address)` (public, payable)
-        1. call create2 with salt (destination chain id: 100, token: USDC.e on Gnosis, recipient address on Gnosis) to create the proxy contract, initialize (owner: refundAddress)
+    1. `createUniversalAccount(address _owner, address _recipient, address _destinationChainId)`
+        1. call create2 with salt (destination chain id, owner, recipient recipient) to create the proxy contract, initialize (\_owner)
         2. initialize the owner within the same transaction
-        3. emit `UniversalAccountCreated(address indexed universal address)`
-    2. `getUniversalAddress(address refundAddress, address recipient, address destination token address)` (view)
+    2. `getUniversalAccount(address _owner, address _recipient, address _destinationChainId)` (view)
 
 ## Backend
 
@@ -63,11 +54,13 @@
         3. Settler:
             1. quote fee
             2. Simulate & Call `settle` function and pay gas fee for user (estimation of fee)
-            3. Speed: fast mode(Taxi) as default, can configure to economic mode (Bus) in the next phase.
-    2. Redis is used for cached, Postgre is used for Database, RabbitMq/BullMq for queue.
+            3. Speed: fast mode(Taxi) as default
+    2. Redis is used for cached, PostgreSQL is used for Database, RabbitMQ for queue management.
     3. Error handling
         1. Retry for 5 times after receiving error within certain operation and abandon the order if threshold reached, set STATUS as FAILED → Trigger Alerts.
         2. The error will most likely coming from on chain bridge operation (i.e. bridge limit reached, not enough credit from Stargate), hence we need to have exponential time for fallback operation.
+        3. Dead letter queue system for failed messages that exceed retry limits.
+        4. Recovery system to detect and reprocess incomplete orders.
     4. Requirement
         1. No duplicate order in the process.
 
@@ -84,8 +77,7 @@
 1. Order Status Flow
     1. A deposit is detected, and an order is created (`CREATED`).
     2. The proxy contract is deployed if it doesn't exist (`DEPLOYED`).
-    3. The `settle()` function is called, initiating the bridge (`INITIATED`).
-    4. The bridge transaction is confirmed (`COMPLETED`).
+    3. The `settle()` function is called and the bridge transaction is confirmed (`COMPLETED`).
 
 > The `nonce` is a critical link between the off-chain order schema and the on-chain smart contract state. Each successful `settle()` call increments the contract's nonce, ensuring that the `keccak256` hash for subsequent orders will be unique.
 
@@ -146,11 +138,12 @@ flowchart TD
 
 1. API
     1. Endpoint
-        1. `registerAddress`
-            1. input: recipient address, destination token address, destination chain id, refund address
+        1. `register-address` (POST /api/v1/register-address)
+            1. input: ownerAddress, recipientAddress, destinationChainId, sourceChainId
             2. output: universal address
             3. TTL: 24 hrs
-            4. Use case:
+            4. Authentication: Requires API key (X-API-Key header)
+            5. Use case:
                 1. To get the universal address
                 2. To store the universal address in cache for the balance watcher.
         2. `getOrderByParams`
@@ -162,11 +155,20 @@ flowchart TD
         4. `getOrderId`
             1. input: {nonce, source chain Id, destination chain Id, destination token, recipient address}
             2. output: Order Id
-        5. `health`
+        5. `health` (GET /api/v1/health) - no authentication required
         6. `supportedRoutes`
             1. return {routes: [`source chain Id`, `destination chain id`]}
+        7. `address` (GET /api/v1/address)
+            1. input: ownerAddress, recipientAddress, destinationChainId, sourceChainId
+            2. output: universal address (compute only, no caching)
+        8. `me` (GET /api/v1/me) - returns authenticated client information
     2. API authentication
+        1. Header-based API key authentication (X-API-Key)
+        2. Client management system with active/inactive status
+        3. Master client privileges for admin operations
     3. Rate limiting
+        1. Global rate limit: 1000 requests/minute
+        2. Per-owner daily rate limit for address registration
 2. Error Handling
 
 ### Order Schema
@@ -193,7 +195,6 @@ flowchart TD
     -   The current state of the order, which can be one of the following:
         -   `CREATED`: The deposit has been detected, and an order has been created.
         -   `DEPLOYED`: The universal address has been deployed on-chain.
-        -   `INITIATED`: The settlement process has started (this is a new, more granular state to add clarity to the flow).
         -   `COMPLETED`: The cross-chain bridge transaction has been successfully completed.
         -   `FAILED`: The order failed after the maximum number of retries.
 -   **transactionHash**: `String` (optional)
@@ -206,6 +207,10 @@ flowchart TD
     -   A string to store any relevant error messages or additional information about the order's status.
 -   **retries**: `Number` (internal)
     -   An internal counter for the number of retry attempts for a failed operation. This is crucial for the error handling logic.
+-   **sourceTokenAddress**: `String`
+    -   The address of the source token (USDC) on the source chain.
+-   **clientId**: `String` (optional)
+    -   The ID of the client that created this order, used for access control and filtering.
 
 ## Requirement
 
@@ -214,27 +219,26 @@ flowchart TD
 ## Edge case
 
 1. User sends unsupported fund
-    1. Either Call withdrawToken if they have the control to the owner address
-    2. Or reach out to the bridge team for manual support if the owner is bridge team
+    1. Call withdrawToken if they have the control to the owner address
 2. User sends less than minimum amount of token
     1. User has to resend more token. Call `/registerAddress` API again.
 3. User sends more than enough amount of token and the bridging limit is reach
     1. The system will reprocess the order after X amount of time.
-        1. will first quote Stargate → quote the amount if correct → bridge the maximum amount available → batch the second one
+        1. will first quote Stargate → quote the amount if correct → bridge the maximum amount available → wait → repeat for second order
 4. User deposits on the wrong chain
     1. Reach out to the team and redeploy it as long as the route is supported by Stargate
 
 ## Limitation
 
 1. All the USDC amount will be bridged as long as the limit is enough
-2. No slippage configuration, bridge amount configuration
+2. No slippage configuration or bridge amount configuration from API
 3. Calldata execution is not allowed
 
 ## Cost estimation
 
 1. On chain caller cost:
     1. gas fee for calling `settle` (can be sponsored by EDU Chain AA Paymaster)
-    2. native gas token in `msg.value` after calling `quoteFee` (has to pre-fund the caller and monitor the balance)
+    2. native gas token in `msg.value` after calling `quoteStargateFee` (has to pre-fund the caller and monitor the balance)
     3. 6bps charged from the bridging token. (automatically deducted from the USDC balance)
 
 ## Workflow
@@ -243,43 +247,91 @@ flowchart TD
 sequenceDiagram
     participant User
     participant API as Bridge API
+    participant Redis as Redis Cache
     participant Contract as Universal Address
-    participant Backend as Settlement Service
+    participant BW as BalanceWatcher
+    participant DQ as Deploy Queue
+    participant DW as Deploy Worker
+    participant SQ as Settle Queue
+    participant SW as Settle Worker
+    participant DB as PostgreSQL
     participant Stargate as Stargate Protocol
     participant Dest as Destination Chain
 
     Note over User, Dest: Example: Bridge USDC from Edu Chain → Gnosis Chain
 
     %% Registration Phase
-    User->>API: POST /register-address
-    Note right of User: { recipient: "0x123...", destChain: 100 }
-    API-->>User: { universalAddress: "0xabc..." }
+    User->>+API: POST /api/v1/register-address
+    Note right of User: { ownerAddress, recipientAddress, destinationChainId, sourceChainId }<br/>X-API-Key: client-api-key
+    API->>API: Authenticate API key
+    API->>API: Validate route & rate limits
+    API->>Contract: getUniversalAccount(owner, recipient, destChainId)
+    Contract-->>API: universalAddress
+    API->>Redis: Cache UDA (24h TTL)
+    API-->>-User: { universalAddress: "0xabc..." }
 
     %% Deposit Phase
     User->>Contract: Send USDC to Universal Address
     Note right of User: Transfer USDC to 0xabc...
 
     %% Detection & Processing
-    Backend->>Contract: Monitor balance changes
-    Backend->>Backend: Detect deposit & create order
-    Backend->>API: Update order status: "processing"
+    loop Every BALANCE_CHECK_INTERVAL_MS
+        BW->>+Redis: listUDAAddresses()
+        Redis-->>-BW: [cached addresses]
+        BW->>Contract: balanceOf(universalAddress)
+        Contract-->>BW: current balance
+        BW->>Contract: nonce() [if balance > threshold]
+        Contract-->>BW: current nonce
+        BW->>DB: ensureOrder(orderId, CREATED)
+        BW->>DQ: enqueueDeploy(orderId)
+    end
+
+    %% Deploy Phase
+    DQ->>+DW: consume deploy message
+    DW->>DB: getOrderById(orderId) [status = CREATED]
+    DW->>Contract: getBytecode(universalAddress)
+    Contract-->>DW: bytecode (or empty if not deployed)
+    alt Already Deployed
+        DW->>DB: updateOrderStatus(DEPLOYED)
+        DW->>SQ: enqueueSettle(orderId)
+    else Not Deployed
+        DW->>Contract: createUniversalAccount(owner, recipient, destChainId)
+        Contract-->>DW: deployment tx
+        DW->>DB: updateOrderStatus(DEPLOYED, txHash)
+        DW->>SQ: enqueueSettle(orderId)
+    end
+    DW-->>-DQ: ack message
 
     %% Settlement Phase
-    Backend->>Contract: Call settle()
-    Contract->>Stargate: Approve & sendToken()
+    SQ->>+SW: consume settle message
+    SW->>DB: getOrderById(orderId) [status = DEPLOYED]
+    SW->>Contract: balanceOf(universalAddress)
+    Contract-->>SW: current balance
+    SW->>Contract: quoteStargateFee(amount, srcToken, slippage)
+    Contract-->>SW: fee quote
+    SW->>Contract: settle(srcToken, maxSlippage) {value: fee}
+    Contract->>Stargate: approve(stargatePool, amount)
+    Contract->>Stargate: sendToken(amount, destChain, recipient)
     Stargate->>Dest: Cross-chain message
-    Dest-->>Backend: Settlement confirmation
-    Backend->>API: Update order status: "completed"
+    Dest-->>SW: Settlement confirmation via tx receipt
+    SW->>DB: updateOrderStatus(COMPLETED, txHash, bridgeUrl)
+    SW-->>-SQ: ack message
+
+    %% Error Handling & Retries
+    Note over DW, SW: On errors: retry with exponential backoff<br/>1s → 5s → 30s → 2m → 10m<br/>After max retries: FAILED status + DLQ
 
     %% Status Tracking
-    User->>API: GET /order-status/{orderId}
-    API-->>User: { status: "completed", txUrl: "..." }
+    User->>+API: GET /api/v1/orders/{orderId}
+    API->>API: Authenticate & filter by clientId
+    API->>DB: getOrderById(orderId, clientId)
+    DB-->>API: order details
+    API-->>-User: { id, status, amount, txHash, bridgeUrl, ... }
 ```
 
 1. Top up (bridge USDC from Edu chain to Gnosis Chain)
     1. User inserts the recipient address on Gnosis Chain (Gnosis Pay address)
-        1. API call `/registerAddress` `{refundAddress, token, recipientAddress}` and return the universal-address
-        2. universal-address is now cached in database for TTL (24 hrs) for balance monitoring. One has to call `/registerAddress` again if not sending min amount of USDC to the universal-address.
+        1. API call `POST /api/v1/register-address` `{ownerAddress, recipientAddress, destinationChainId, sourceChainId}` with API key authentication and return the universal-address
+        2. universal-address is now cached in Redis for TTL (24 hrs) for balance monitoring. One has to call the registration endpoint again if not sending min amount of USDC to the universal-address.
     2. User sends the USDC to the universal-address
         1. Balance has increased and detected by the backend.
         2. Backend starts processing the fund
@@ -292,23 +344,5 @@ sequenceDiagram
 
 1. What is the USDC token type on Edu Chain?
     1. Hydra OFT
-
-# Timeline
-
-1. Smart contract development (1.5 weeks, excluding Audit)
-    1. Smart contract
-    2. Test
-    3. Audit (on going once development is finished)
-2. Backend development (3 weeks)
-    1. Server
-    2. Test
-3. API development (2 weeks)
-    1. Server
-    2. Test
-4. Docs & Miscellaneous (2 days)
-
-Request from Devops
-
-1. Deployment for the API site
-2. Create server for hosting the backend and API
-3. Monitoring setup for the caller balance.
+2. What is the USDC token type on Gnosis Chain?
+    1. [Pool OFT](https://docs.stargate.finance/resources/contracts/mainnet-contracts#gnosis-endpointid-30145)
