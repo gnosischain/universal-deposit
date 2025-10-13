@@ -60,7 +60,9 @@ export async function createServer() {
         description:
           "Cross-chain USDC bridging service between EDU chain and Gnosis chain using Stargate/LayerZero. Node 22, Fastify, RabbitMQ.",
       },
-      servers: [{ url: "http://localhost:" + config.API_PORT }],
+      servers: [
+        { url: config.API_PUBLIC_URL ?? "http://localhost:" + config.API_PORT },
+      ],
       components: {
         securitySchemes: {
           ApiKeyAuth: { type: "apiKey", in: "header", name: "X-API-Key" },
