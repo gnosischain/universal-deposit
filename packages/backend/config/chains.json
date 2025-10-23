@@ -111,8 +111,8 @@
         "proxyFactory": "0x976E725beeaf694Fe79cA50CD9B3b657193FcDb0",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0xA7FEbF3D2c50076eb92eE79BA6083E51873528DD",
-        "usdc": "0x27a16dc786820B16E5c9028b75B99F6f604b5d26",
-        "stargateUsdc": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
+        "usdc": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+        "stargateUsdc": "0x27a16dc786820B16E5c9028b75B99F6f604b5d26"
       },
       "layerZero": {
         "endpointId": 30145,
@@ -141,8 +141,8 @@
         "proxyFactory": "0x976E725beeaf694Fe79cA50CD9B3b657193FcDb0",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0xA7FEbF3D2c50076eb92eE79BA6083E51873528DD",
-        "usdc": "0xc026395860Db2d07ee33e05fE50ed7bD583189C7",
-        "stargateUsdc": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+        "usdc": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "stargateUsdc": "0xc026395860Db2d07ee33e05fE50ed7bD583189C7"
       },
       "layerZero": {
         "endpointId": 30145,
@@ -171,8 +171,8 @@
         "proxyFactory": "0x976E725beeaf694Fe79cA50CD9B3b657193FcDb0",
         "udManager": "0x72439FDa3a67988b241060c0A0d3Cb8AAC123345",
         "udAccount": "0xA7FEbF3D2c50076eb92eE79BA6083E51873528DD",
-        "usdc": "0xcE8CcA271Ebc0533920C83d39F417ED6A0abB7D0",
-        "stargateUsdc": "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"
+        "usdc": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+        "stargateUsdc": "0xcE8CcA271Ebc0533920C83d39F417ED6A0abB7D0"
       },
       "layerZero": {
         "endpointId": 30145,
@@ -199,26 +199,50 @@
       "enabled": true
     },
     {
-      "source": "arbitrum",
-      "destination": "gnosis",
-      "token": "USDC",
-      "enabled": true
-    },
-    {
       "source": "gnosis",
       "destination": "arbitrum",
       "token": "USDC",
       "enabled": true
     },
     {
-      "source": "arbitrum",
-      "destination": "edu",
+      "source": "gnosis",
+      "destination": "base",
       "token": "USDC",
       "enabled": true
     },
     {
-      "source": "edu",
-      "destination": "arbitrum",
+      "source": "gnosis",
+      "destination": "ethereum",
+      "token": "USDC",
+      "enabled": true
+    },
+    {
+      "source": "gnosis",
+      "destination": "optimism",
+      "token": "USDC",
+      "enabled": true
+    },
+    {
+      "source": "arbitrum",
+      "destination": "gnosis",
+      "token": "USDC",
+      "enabled": true
+    },
+    {
+      "source": "base",
+      "destination": "gnosis",
+      "token": "USDC",
+      "enabled": true
+    },
+    {
+      "source": "ethereum",
+      "destination": "gnosis",
+      "token": "USDC",
+      "enabled": true
+    },
+    {
+      "source": "optimism",
+      "destination": "gnosis",
       "token": "USDC",
       "enabled": true
     }
