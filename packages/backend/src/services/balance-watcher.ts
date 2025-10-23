@@ -8,7 +8,10 @@ import {
   updateUDAState,
   pruneIndex,
 } from "../cache/uda";
-import { ensureOrder } from "../database/repositories/orders.repo";
+import {
+  ensureOrder,
+  getOrderByParams,
+} from "../database/repositories/orders.repo";
 import { ordersCreated } from "../monitoring/metrics";
 import {
   getSourceUsdcAddress,
@@ -114,13 +117,38 @@ async function processAddress(address: string): Promise<void> {
       }
     }
 
-    // Idempotency guard: skip if this nonce was already processed
+    // Idempotency guard: if Redis says processed, verify DB actually has the order before skipping.
+    // If DB doesn't have it, repair Redis by setting lastProcessedNonce to (nonce - 1) or -1 and proceed to create.
     if (rec.lastProcessedNonce === nonce) {
-      logger.debug(
-        { uda: rec.universalAddress, nonce: nonce.toString() },
-        "BalanceWatcher: nonce already processed, skipping",
+      const existing = await getOrderByParams({
+        universalAddress: rec.universalAddress,
+        sourceChainId: rec.sourceChainId,
+        nonce: Number(nonce),
+      });
+      if (existing) {
+        logger.debug(
+          {
+            uda: rec.universalAddress,
+            nonce: nonce.toString(),
+            orderId: existing.id,
+          },
+          "BalanceWatcher: nonce already processed (confirmed in DB), skipping",
+        );
+        return;
+      }
+      const repairedNonce = nonce > 0n ? nonce - 1n : -1n;
+      await updateUDAState(rec.universalAddress, {
+        lastProcessedNonce: repairedNonce,
+      });
+      logger.warn(
+        {
+          uda: rec.universalAddress,
+          nonce: nonce.toString(),
+          repairedTo: repairedNonce.toString(),
+        },
+        "BalanceWatcher: Redis indicates processed nonce but no DB order found; repaired lastProcessedNonce and proceeding to create",
       );
-      return;
+      // Do not return - continue to create order now
     }
 
     // Compute deterministic order id per spec
