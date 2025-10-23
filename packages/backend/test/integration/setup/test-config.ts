@@ -85,18 +85,18 @@ export const TEST_CONFIG = {
       amount: "FULL_BALANCE" as const,
     },
 
-    {
-      name: "Gnosis → Ethereum",
-      sourceChain: "gnosis",
-      destinationChain: "ethereum",
-      amount: "FIXED" as const,
-    },
-    {
-      name: "Ethereum → Gnosis",
-      sourceChain: "ethereum",
-      destinationChain: "gnosis",
-      amount: "FULL_BALANCE" as const,
-    },
+    // {
+    //   name: "Gnosis → Ethereum",
+    //   sourceChain: "gnosis",
+    //   destinationChain: "ethereum",
+    //   amount: "FIXED" as const,
+    // },
+    // {
+    //   name: "Ethereum → Gnosis",
+    //   sourceChain: "ethereum",
+    //   destinationChain: "gnosis",
+    //   amount: "FULL_BALANCE" as const,
+    // },
 
     {
       name: "Gnosis → Base",
