@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../database/client";
 import { redis } from "../cache/redis";
 import { createChannel } from "../queues/connection";
-import { getPublicClient } from "../config/chains";
+import { getPublicClient, getRegistry } from "../config/chains";
 import { isHeartbeatFresh } from "./heartbeat";
 
 export type ServiceStatus = "healthy" | "degraded" | "unhealthy";
@@ -19,6 +19,7 @@ export interface HealthReport {
     deployWorker: boolean;
     settleWorker: boolean;
   };
+  chains: Record<string, boolean>;
   timestamp: string;
 }
 
@@ -53,23 +54,23 @@ async function checkRabbitMQ(): Promise<boolean> {
   }
 }
 
-async function checkEduChain(): Promise<boolean> {
+async function checkAllChains(): Promise<Record<string, boolean>> {
   try {
-    const client = getPublicClient("edu");
-    const n = await client.getBlockNumber();
-    return typeof n === "bigint";
+    const reg = getRegistry();
+    const results = await Promise.all(
+      reg.chains.map(async (entry) => {
+        try {
+          const client = getPublicClient(entry.key);
+          const n = await client.getBlockNumber();
+          return [entry.key, typeof n === "bigint"] as const;
+        } catch {
+          return [entry.key, false] as const;
+        }
+      }),
+    );
+    return Object.fromEntries(results);
   } catch {
-    return false;
-  }
-}
-
-async function checkGnosisChain(): Promise<boolean> {
-  try {
-    const client = getPublicClient("gnosis");
-    const n = await client.getBlockNumber();
-    return typeof n === "bigint";
-  } catch {
-    return false;
+    return {};
   }
 }
 
@@ -78,8 +79,7 @@ export async function getHealth(): Promise<HealthReport> {
     database,
     redisOk,
     rabbitmq,
-    eduChain,
-    gnosisChain,
+    chains,
     balanceWatcher,
     deployWorker,
     settleWorker,
@@ -87,24 +87,24 @@ export async function getHealth(): Promise<HealthReport> {
     checkDatabase(),
     checkRedis(),
     checkRabbitMQ(),
-    checkEduChain(),
-    checkGnosisChain(),
+    checkAllChains(),
     isHeartbeatFresh("balance-watcher"),
     isHeartbeatFresh("deploy-worker"),
     isHeartbeatFresh("settle-worker"),
   ]);
 
-  const connectivityOk = [
-    database,
-    redisOk,
-    rabbitmq,
-    eduChain,
-    gnosisChain,
-  ].filter(Boolean).length;
+  const eduChain = chains["edu"] ?? false;
+  const gnosisChain = chains["gnosis"] ?? false;
+
+  const core = [database, redisOk, rabbitmq];
+  const chainStatuses = Object.values(chains);
+  const totalItems = core.length + chainStatuses.length;
+  const connectivityOk = [...core, ...chainStatuses].filter(Boolean).length;
+
   const status: ServiceStatus =
-    connectivityOk >= 4
+    connectivityOk >= totalItems - 1
       ? "healthy"
-      : connectivityOk >= 2
+      : connectivityOk >= Math.ceil(totalItems / 2)
         ? "degraded"
         : "unhealthy";
 
@@ -120,6 +120,7 @@ export async function getHealth(): Promise<HealthReport> {
       deployWorker,
       settleWorker,
     },
+    chains,
     timestamp: new Date().toISOString(),
   };
 }
