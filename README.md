@@ -36,7 +36,7 @@ Check out this sample script for end to end workflow interacting with the API: h
 2. **Register a Universal Address**:
 
     ```bash
-    curl -X POST https://dev.universal-deposit.gnosisdev.com/api/v1/register-address \
+    curl -X POST https://prod.universal-deposit.gnosischain.com/api/v1/register-address \
       -H "X-API-Key: your-api-key" \
       -H "Content-Type: application/json" \
       -d '{
@@ -62,7 +62,7 @@ Check out this sample script for end to end workflow interacting with the API: h
 4. **Get order by parameters** after deposit:
 
     ```bash
-    curl -X GET "https://dev.universal-deposit.gnosisdev.com/api/v1/orders" \
+    curl -X GET "https://prod.universal-deposit.gnosischain.com/api/v1/orders" \
       -H "X-API-Key: your-api-key" \
       -H "Content-Type: application/json" \
       -d '{
@@ -78,7 +78,7 @@ Check out this sample script for end to end workflow interacting with the API: h
     1. Fetch order ID    
 
     ```bash
-      curl -X POST "https://dev.universal-deposit.gnosisdev.com/api/v1/orders/generate-id" \
+      curl -X POST "https://prod.universal-deposit.gnosischain.com/api/v1/orders/generate-id" \
         -H "X-API-Key: your-api-key" \
         -H "Content-Type: application/json" \
         -d '{
@@ -102,7 +102,7 @@ Check out this sample script for end to end workflow interacting with the API: h
 
     2. Get order by order ID    
     ```bash
-    curl -X GET "https://dev.universal-deposit.gnosisdev.com/api/v1/orders/{orderId}" \
+    curl -X GET "https://prod.universal-deposit.gnosischain.com/api/v1/orders/{orderId}" \
       -H "X-API-Key: your-api-key" \
       -H "Content-Type: application/json" 
     ```
@@ -120,6 +120,7 @@ Check out this sample script for end to end workflow interacting with the API: h
 -   Edu Chain (41923) ↔ Gnosis Chain (100) 
 -   Arbitrum  (42161) ↔ Gnosis Chain (100) 
 -   Edu Chain (41923) ↔ Arbitrum (42161) 
+-   {Ethereum (1), Base (8453), Optimism (10)} ↔ Gnosis Chain (100)
 -   Uses Stargate Protocol for bridging with 6bps fee on USDC transfers
 
 ## Deployments
@@ -135,6 +136,9 @@ Check out this sample script for end to end workflow interacting with the API: h
 | Gnosis Chain | 0x2a22f9c3b484c3629090FeED35F17Ff8F88f76F0 | 0xB1EeAD6959cb5bB9B20417d6689922523B2B86C3 |
 | EDU Chain    | 0x12a272A581feE5577A5dFa371afEB4b2F3a8C2F8 | 0x28BEc7E30E6faee657a03e19Bf1128AaD7632A00 |
 | Arbitrum     | 0xaf88d065e77c8cc2239327c5edb3a432268e5831 | 0xe8CDF27AcD73a434D661C84887215F7598e7d0d3 |
+| Ethereum     | 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 | 0xc026395860Db2d07ee33e05fE50ed7bD583189C7 |
+| Base         | 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913 | 0x27a16dc786820B16E5c9028b75B99F6f604b5d26 |
+| Optimism     | 0x0b2c639c533813f4aa9d7837caf62653d097ff85 | 0xcE8CcA271Ebc0533920C83d39F417ED6A0abB7D0 |
 
 [Technical Details](TechnicalDetails.md)
 
