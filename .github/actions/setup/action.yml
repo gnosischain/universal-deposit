@@ -5,17 +5,17 @@ runs:
     using: "composite"
     steps:
         - name: Use pnpm
-          uses: pnpm/action-setup@v4
+          uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4
           with:
               run_install: false
 
         - name: Use Node
-          uses: actions/setup-node@v4
+          uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
           with:
               node-version: 22.3.0
               cache: "pnpm"
 
         - name: Use foundry
-          uses: foundry-rs/foundry-toolchain@v1
+          uses: foundry-rs/foundry-toolchain@8b0419c685ef46cb79ec93fbdc131174afceb730 # v1
           with:
               version: nightly
