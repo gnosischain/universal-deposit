@@ -24,8 +24,8 @@
         "package.json": "sort-package-json"
     },
     "dependencies": {
-        "@openzeppelin/contracts": "4.8.1",
-        "@openzeppelin/contracts-upgradeable": "4.8.1",
+        "@openzeppelin/contracts": "4.9.6",
+        "@openzeppelin/contracts-upgradeable": "4.9.6",
         "@stargatefinance/stg-evm-v2": "5.0.5"
     },
     "devDependencies": {
