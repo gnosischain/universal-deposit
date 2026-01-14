@@ -9,6 +9,8 @@ on:
 jobs:
     build-and-push:
         runs-on: ubuntu-latest
+        permissions:
+            contents: read
         outputs:
             image-tag: ${{ github.sha }}
         steps:
