@@ -31,7 +31,6 @@ contract ProxyFactoryTest is Test {
 
   event UDACreated(address indexed UD);
 
-
   function setUp() public {
     mockUsdc = new ERC20();
     universalDepositAccountImpl = new UniversalDepositAccount();
@@ -49,12 +48,11 @@ contract ProxyFactoryTest is Test {
     assertEq(proxy, expectedProxy, 'mismatch proxy address');
   }
 
-  function testCreateAccountAndEmitEvent() public{
+  function testCreateAccountAndEmitEvent() public {
     address expectedProxy = proxyFactory.getUniversalAccount(owner, recipient, dstChainId);
 
     vm.expectEmit();
     emit UDACreated(expectedProxy);
     address proxy = proxyFactory.createUniversalAccount(owner, recipient, dstChainId);
-
   }
 }

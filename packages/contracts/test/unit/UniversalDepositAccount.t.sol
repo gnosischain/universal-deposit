@@ -230,7 +230,6 @@ contract UniversalDepositAccountTest is StargateTestHelper, Test {
     assertEq(IStargatePool(fixture.stargate).poolBalance(), 0);
   }
 
-
   /**
    * @notice Test proxy initialization and metadata retrieval
    * @dev Verifies correct initialization of account parameters
